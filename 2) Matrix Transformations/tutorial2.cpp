@@ -44,15 +44,16 @@ int main() {
 		if (Window::GetKeyboard()->KeyDown(KEYBOARD_P))
 			position.z += 1.0f;
 
-		if (Window::GetKeyboard()->KeyDown(KEYBOARD_Q))
+		if (Window::GetKeyboard()->KeyDown(KEYBOARD_Z))
 			fov--;
-		if (Window::GetKeyboard()->KeyDown(KEYBOARD_E))
+		if (Window::GetKeyboard()->KeyDown(KEYBOARD_X))
 			fov++;
 
 		renderer.SetRotation(rotation);
 		renderer.SetScale(scale);
 		renderer.SetPosition(position);
 		renderer.SetFov(fov);
+		renderer.UpdateScene(w.GetTimer()->GetTimeDeltaSeconds());
 		renderer.RenderScene();
 		renderer.SwapBuffers();
 	}

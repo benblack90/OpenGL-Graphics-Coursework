@@ -5,7 +5,7 @@ Renderer::Renderer(Window& parent)
 {
 	triangle = Mesh::GenerateTriangle();
 	matrixShader = new Shader("MatrixVertex.glsl", "colourFragment.glsl");
-
+	camera = new Camera();
 	if (!matrixShader->LoadSuccess())
 	{
 		return;
@@ -38,13 +38,13 @@ void Renderer::RenderScene()
 
 	BindShader(matrixShader);
 
-	//adjust fov value
+	//the -1 value in the 11th place identifies it as using perspective rather than orthographic projection
 	if(projMatrix.values[11] == -1)
-	projMatrix = Matrix4::Perspective(1.0f, 10000.0f, (float)width / (float)height, fov);
+		//adjust fov value
+		projMatrix = Matrix4::Perspective(1.0f, 10000.0f, (float)width / (float)height, fov);
 
 	//update the matrix uniform variable in the shader - first with the projection matrix, then the view matrix
-	glUniformMatrix4fv(glGetUniformLocation(matrixShader->GetProgram(), "projMatrix"), 1, false, projMatrix.values);
-	glUniformMatrix4fv(glGetUniformLocation(matrixShader->GetProgram(), "viewMatrix"), 1, false, viewMatrix.values);
+	UpdateShaderMatrices();
 
 	//render 3 triangles offset in the x and y directions, and increasingly 'in the distance' in the z axis
 	for (int i = 0; i < 3; ++i)
@@ -60,4 +60,10 @@ void Renderer::RenderScene()
 
 		triangle->Draw();
 	}
+}
+
+void Renderer::UpdateScene(float dt)
+{
+	camera->UpdateCamera(dt);
+	viewMatrix = camera->BuildViewMatrix();
 }
