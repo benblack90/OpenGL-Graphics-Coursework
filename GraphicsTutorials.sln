@@ -43,12 +43,24 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Tutorial 07 - Scene Managem
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Tutorial 08 - Index Buffers", "8) Index Buffers\Tutorial8.vcxproj", "{5844D912-7DC1-4A49-9F98-F7FE1C053563}"
+	ProjectSection(ProjectDependencies) = postProject
+		{98D6B51B-CB0A-4389-ADC6-24082B967C3F} = {98D6B51B-CB0A-4389-ADC6-24082B967C3F}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Tutorial 09 - Skeletal Animation", "9) Skeletal Animation\Tutorial9.vcxproj", "{9FB8682D-BD52-4B33-B37D-D6C2141B67DE}"
+	ProjectSection(ProjectDependencies) = postProject
+		{98D6B51B-CB0A-4389-ADC6-24082B967C3F} = {98D6B51B-CB0A-4389-ADC6-24082B967C3F}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Tutorial 10 - Post Processing", "10) Post Processing\Tutorial10.vcxproj", "{9D4EB641-9F16-458C-AA69-448DA2C2464E}"
+	ProjectSection(ProjectDependencies) = postProject
+		{98D6B51B-CB0A-4389-ADC6-24082B967C3F} = {98D6B51B-CB0A-4389-ADC6-24082B967C3F}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Tutorial 11 - Real-time Lighting A", "11) Per Fragment Lighting A\Tutorial11.vcxproj", "{95F93172-8DC5-4E52-80B6-0D56624BD569}"
+	ProjectSection(ProjectDependencies) = postProject
+		{98D6B51B-CB0A-4389-ADC6-24082B967C3F} = {98D6B51B-CB0A-4389-ADC6-24082B967C3F}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Tutorial 12 - Real-time Lighting B", "12) Per Fragment Lighting B\Tutorial12.vcxproj", "{DC9F082D-63BA-4BD1-8A60-1BC13F745154}"
 EndProject

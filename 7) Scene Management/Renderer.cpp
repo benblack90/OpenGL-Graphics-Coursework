@@ -66,6 +66,8 @@ void Renderer::BuildNodeLists(SceneNode* from)
 	if (frameFrustum.InsideFrustum(*from))
 	{
 		Vector3 dir = from->GetWorldTransform().GetPositionVector() - camera->GetPosition();
+		
+		//dot product of self is magnitude squared
 		from->SetCameraDistance(Vector3::Dot(dir, dir));
 
 		if (from->GetColour().w < 1.0f)

@@ -39,19 +39,19 @@ public:
 
 	virtual void Update(float dt);
 	virtual void Draw(const OGLRenderer &r);
-	static bool CompareByCameraDistance(SceneNode* a, SceneNode* b) { return (a->distanceFromCamera < b->distanceFromCamera) ? true : false;	}
+	static bool CompareByCameraDistance(SceneNode* a, SceneNode* b) { return (a->distanceFromCamera < b->distanceFromCamera) ? true : false; }
 	std::vector<SceneNode*>::const_iterator GetChildIteratorStart() { return children.begin(); }
 	std::vector<SceneNode*>::const_iterator GetChildIteratorEnd() { return children.end(); }
 
 protected:
-	SceneNode* parent;						//pointer to parent
-	Mesh* mesh;								//pointer to mesh
-	Matrix4 worldTransform;					//world coordinates matrix
-	Matrix4 transform;						//local (to parent) coordinates matrix
-	Vector3 modelScale;						//scaling vector, separate from transforms
-	Vector4 colour;							//colour vector							
-	std::vector<SceneNode*> children;		//vector of all children, readable via the public getter methods for the const iterator
-	float distanceFromCamera;				//self explanatory!
-	float boundingRadius;					//radius of the sphere bounding the node
-	GLuint texture;							//the node's texture
+	SceneNode* parent;							//pointer to parent
+	Mesh* mesh;									//pointer to mesh
+	Matrix4 worldTransform;						//world coordinates matrix
+	Matrix4 transform;							//local (to parent) coordinates matrix
+	Vector3 modelScale;							//scaling vector, separate from transforms
+	Vector4 colour;								//colour vector							
+	std::vector<SceneNode*> children;			//vector of all children, readable via the public getter methods for the const iterator
+	float distanceFromCamera;					//self explanatory!
+	float boundingRadius;						//radius of the sphere bounding the node
+	GLuint texture;								//the node's texture
 };
