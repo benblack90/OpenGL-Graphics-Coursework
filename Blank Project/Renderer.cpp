@@ -23,7 +23,7 @@ Renderer::Renderer(Window& parent)
 	s->SetTexture(SOIL_load_OGL_texture(TEXTUREDIR"Barren Reds.JPG", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS));
 	s->SetColour(Vector4(1.0f, 1.0f, 1.0f, 1.0f));
 	s->SetTransform(Matrix4::Translation(heightmapSize * Vector3(0.5f, 1.0f, 0.5f)));
-	s->SetModelScale(Vector3(10.0f, 10.0f, 10.0f));
+	s->SetModelScale(Vector3(1.0f, 1.0f, 1.0f));
 	s->SetBoundingRadius(1.0f);
 	s->SetMesh(Mesh::LoadFromMeshFile("rock_01.msh"));
 	root->AddChild(s);
@@ -127,17 +127,19 @@ void Renderer::DrawNode(SceneNode* n)
 		Matrix4 model = n->GetWorldTransform() * Matrix4::Scale(n->GetModelScale());
 		BindShader(rockShader);
 
-		glUniformMatrix4fv(glGetUniformLocation(rockShader->GetProgram(), "modelMatrix"), 1, false, model.values);
+		
 
 
 		glUniform4fv(glGetUniformLocation(rockShader->GetProgram(), "nodeColour"), 1, (float*)&n->GetColour());
 
 		currentTexture = n->GetTexture();
-		glActiveTexture(GL_TEXTURE2);
+		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, currentTexture);
 
 		glUniform1i(glGetUniformLocation(rockShader->GetProgram(), "useTexture"), currentTexture);
-
+		UpdateShaderMatrices();
+		//readjust model matrix, so it matches the values we actually want, though.
+		glUniformMatrix4fv(glGetUniformLocation(rockShader->GetProgram(), "modelMatrix"), 1, false, model.values);
 		n->Draw(*this);
 	}
 }
