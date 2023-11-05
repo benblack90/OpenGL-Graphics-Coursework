@@ -8,13 +8,27 @@ Renderer::Renderer(Window& parent)
 {
 	quad = Mesh::GenerateQuad();
 	LoadTerrain();
-	LoadCubeMap();
+	
 
 	Vector3 heightmapSize = heightMap->GetHeightmapSize();
-	camera = new Camera(-45.0f, 0.0f, 0, heightmapSize * Vector3(0.5f, 1.0f, 0.5f));
+	camera = new Camera(-15.0f, 0.0f, 0, heightmapSize * Vector3(0.5f, 1.0f, 0.5f));
 
 	light = new Light(heightmapSize * Vector3(0.5f, 1.5f, 0.5f), Vector4(1, 1, 1, 1), heightmapSize.x * 0.5f);
 
+	//load rock shader
+	root = new SceneNode();
+	rockShader = new Shader("SceneVertex.glsl", "SceneFragment.glsl");
+	if (!rockShader->LoadSuccess()) return;
+	SceneNode* s = new SceneNode();
+	s->SetTexture(SOIL_load_OGL_texture(TEXTUREDIR"Barren Reds.JPG", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS));
+	s->SetColour(Vector4(1.0f, 1.0f, 1.0f, 1.0f));
+	s->SetTransform(Matrix4::Translation(heightmapSize * Vector3(0.5f, 1.0f, 0.5f)));
+	s->SetModelScale(Vector3(10.0f, 10.0f, 10.0f));
+	s->SetBoundingRadius(1.0f);
+	s->SetMesh(Mesh::LoadFromMeshFile("rock_01.msh"));
+	root->AddChild(s);
+
+	LoadCubeMap();
 	projMatrix = Matrix4::Perspective(1.0f, 15000.0f, (float)width / (float)height, 45.0f);
 
 	glEnable(GL_DEPTH_TEST);
@@ -61,6 +75,9 @@ void Renderer::UpdateScene(float dt)
 {
 	camera->UpdateCamera(dt);
 	viewMatrix = camera->BuildViewMatrix();
+	frameFrustum.FromMatrix(projMatrix * viewMatrix);
+
+	root->Update(dt);
 }
 
 void Renderer::RenderScene()
@@ -68,6 +85,8 @@ void Renderer::RenderScene()
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 	DrawSkyBox();
 	DrawHeightMap();
+	for (auto i = root->GetChildIteratorStart(); i != root->GetChildIteratorEnd(); i++)
+		DrawNode(*i);
 }
 
 void Renderer::DrawHeightMap()
@@ -99,4 +118,26 @@ void Renderer::DrawSkyBox()
 	UpdateShaderMatrices();
 	quad->Draw();
 	glDepthMask(GL_TRUE);
+}
+
+void Renderer::DrawNode(SceneNode* n)
+{
+	if (n->GetMesh())
+	{
+		Matrix4 model = n->GetWorldTransform() * Matrix4::Scale(n->GetModelScale());
+		BindShader(rockShader);
+
+		glUniformMatrix4fv(glGetUniformLocation(rockShader->GetProgram(), "modelMatrix"), 1, false, model.values);
+
+
+		glUniform4fv(glGetUniformLocation(rockShader->GetProgram(), "nodeColour"), 1, (float*)&n->GetColour());
+
+		currentTexture = n->GetTexture();
+		glActiveTexture(GL_TEXTURE2);
+		glBindTexture(GL_TEXTURE_2D, currentTexture);
+
+		glUniform1i(glGetUniformLocation(rockShader->GetProgram(), "useTexture"), currentTexture);
+
+		n->Draw(*this);
+	}
 }

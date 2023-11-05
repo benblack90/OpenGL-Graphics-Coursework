@@ -1,5 +1,7 @@
 #pragma once
 #include "../nclgl/OGLRenderer.h"
+#include "../nclgl/SceneNode.h"
+#include "../nclgl/Frustum.h"
 
 
 class HeightMap;
@@ -20,15 +22,20 @@ protected:
 	void LoadCubeMap();
 	void DrawSkyBox();
 	void DrawHeightMap();
+	void DrawNode(SceneNode* n);
 
 	HeightMap* heightMap;
 	Mesh* quad;
 	Shader* lightShader;
 	Shader* reflectShader;
 	Shader* skyboxShader;
+	Shader* rockShader;
+	SceneNode* root;
 	Camera* camera;
 	Light* light;
 	GLuint heightmapTex;
 	GLuint heightmapBump;
 	GLuint cubeMap;
+	GLuint currentTexture;
+	Frustum frameFrustum;
 };
