@@ -78,13 +78,22 @@ public:
 
 	//Multiplies 'this' matrix by matrix 'a'. Performs the multiplication in 'OpenGL' order (ie, backwards)
 	inline Matrix4 operator*(const Matrix4 &a) const{	
-		Matrix4 out;
+		/*Matrix4 out;
 		//Students! You should be able to think up a really easy way of speeding this up...
-		for(unsigned int r = 0; r < 4; ++r) {
+		for (unsigned int r = 0; r < 4; ++r) {
 			for(unsigned int c = 0; c < 4; ++c) {
 				out.values[c + (r*4)] = 0.0f;
 				for(unsigned int i = 0; i < 4; ++i) {
 					out.values[c + (r*4)] += this->values[c+(i*4)] * a.values[(r*4)+i];
+				}
+			}
+		}*/
+		const float elements[16] = { 0 };
+		Matrix4 out = Matrix4(elements);
+		for (unsigned int r = 0; r < 4; ++r) {
+			for (unsigned int c = 0; c < 4; ++c) {
+				for (unsigned int i = 0; i < 4; ++i) {
+					out.values[c + (r * 4)] += this->values[c + (i * 4)] * a.values[(r * 4) + i];
 				}
 			}
 		}

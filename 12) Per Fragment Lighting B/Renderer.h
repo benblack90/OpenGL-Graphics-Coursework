@@ -21,4 +21,5 @@ protected:
 	Camera* camera;
 	Light* light;
 	GLuint texture;
+	GLuint bumpmap;
 };

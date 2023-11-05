@@ -5,7 +5,7 @@
 Renderer::Renderer(Window &parent)
 	:OGLRenderer(parent)
 {
-	heightMap = new HeightMap(TEXTUREDIR"noise.png");
+	heightMap = new HeightMap(TEXTUREDIR"heightmapfjord.png");
 	camera = new Camera(-40, 270, 0, Vector3());
 
 	Vector3 dimensions = heightMap->GetHeightmapSize();

@@ -75,8 +75,19 @@ public:
 	Vector3 operator*(const Vector3 &v) const;
 
 	inline Matrix3 operator*(const Matrix3 &a) const {
-		Matrix3 out;
+		/*Matrix3 out;
 		//Students! You should be able to think up a really easy way of speeding this up...
+		for (unsigned int r = 0; r < 3; ++r) {
+			for (unsigned int c = 0; c < 3; ++c) {
+				out.values[c + (r * 3)] = 0.0f;
+				for (unsigned int i = 0; i < 3; ++i) {
+					out.values[c + (r * 3)] += this->values[c + (i * 3)] * a.values[(r * 3) + i];
+				}
+			}
+		}*/
+
+		float elements[9] = { 0 };
+		Matrix3 out(elements);
 		for (unsigned int r = 0; r < 3; ++r) {
 			for (unsigned int c = 0; c < 3; ++c) {
 				out.values[c + (r * 3)] = 0.0f;

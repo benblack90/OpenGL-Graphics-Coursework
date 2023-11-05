@@ -14,7 +14,6 @@ _-_-_-_-_-_-_-""  ""
 */
 #include "OGLRenderer.h"
 #include "Shader.h"
-#include "Light.h"
 #include <algorithm>
 
 using std::string;
@@ -113,7 +112,8 @@ OGLRenderer::OGLRenderer(Window &window)	{
 #ifdef OPENGL_DEBUGGING 
 		| WGL_CONTEXT_DEBUG_BIT_ARB
 #endif		//No deprecated stuff!! DIE DIE DIE glBegin!!!!
-		,WGL_CONTEXT_PROFILE_MASK_ARB, WGL_CONTEXT_CORE_PROFILE_BIT_ARB,		//We want everything OpenGL 3.2 provides...
+			//sorry, Rich, I had to turn compatibility on :( until we get a fix for how soil's cube mapping function works ...
+		,WGL_CONTEXT_PROFILE_MASK_ARB, WGL_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB,		//We want everything OpenGL 3.2 provides...
 		0					//That's enough attributes...
     };
 
@@ -270,6 +270,6 @@ void OGLRenderer::SetTextureRepeating(GLuint target, bool repeating)
 void OGLRenderer::SetShaderLight(const Light& l)
 {
 	glUniform3fv(glGetUniformLocation(currentShader->GetProgram(), "lightPos"), 1, (float*) &l.GetPosition());
-	glUniform4fv(glGetUniformLocation(currentShader->GetProgram(), "lightColour"), 1, (float*)&l.GetColour());
+	glUniform4fv(glGetUniformLocation(currentShader->GetProgram(), "lightColour"), 1, (float*) &l.GetColour());
 	glUniform1f(glGetUniformLocation(currentShader->GetProgram(), "lightRadius"), l.GetRadius());
 }
