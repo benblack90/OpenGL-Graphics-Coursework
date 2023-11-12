@@ -50,10 +50,12 @@ Renderer::~Renderer()
 
 void Renderer::LoadCubeMap()
 {
-	cubeMap = SOIL_load_OGL_cubemap(TEXTUREDIR"rusted_west.JPG",
-		TEXTUREDIR"rusted_east.JPG",
-		TEXTUREDIR"rusted_up.JPG", TEXTUREDIR"rusted_down.JPG",
-		TEXTUREDIR"rusted_south.JPG", TEXTUREDIR"rusted_north.JPG",
+	cubeMap = SOIL_load_OGL_cubemap(TEXTUREDIR"starbox_right.png",
+		TEXTUREDIR"starbox_left.png",
+		TEXTUREDIR"starbox_top.png", 
+		TEXTUREDIR"starbox_bottom.png",
+		TEXTUREDIR"starbox_front.png", 
+		TEXTUREDIR"starbox_back.png",
 		SOIL_LOAD_RGB, SOIL_CREATE_NEW_ID, 0);
 	skyboxShader = new Shader("skyboxVertex.glsl", "skyboxFragment.glsl");
 	if ( !skyboxShader->LoadSuccess() || !cubeMap) return;
