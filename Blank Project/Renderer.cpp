@@ -21,7 +21,6 @@ Renderer::Renderer(Window& parent)
 	if (!rockShader->LoadSuccess()) return;
 	SceneNode* s = new SceneNode();
 	s->SetAlbedoTexture(SOIL_load_OGL_texture(TEXTUREDIR"Barren Reds.JPG", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS));
-	s->SetBumpTexture(SOIL_load_OGL_texture(TEXTUREDIR"Barren RedsDOT3.JPG", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS));
 	s->SetColour(Vector4(1.0f, 1.0f, 1.0f, 1.0f));
 	s->SetTransform(Matrix4::Translation(heightmapSize * Vector3(0.5f, 1.0f, 0.5f)));
 	s->SetModelScale(Vector3(1.0f, 1.0f, 1.0f));
@@ -129,23 +128,14 @@ void Renderer::DrawNode(SceneNode* n)
 	if (n->GetMesh())
 	{
 		Matrix4 model = n->GetWorldTransform() * Matrix4::Scale(n->GetModelScale());
-		BindShader(lightShader);
-		SetShaderLight(*light);
+		BindShader(rockShader);
+		glUniform4fv(glGetUniformLocation(rockShader->GetProgram(), "nodeColour"), 1, (float*)&n->GetColour());
 
-		glUniform3fv(glGetUniformLocation(lightShader->GetProgram(), "cameraPos"), 1, (float*)&camera->GetPosition());
 		currentTexture = n->GetAlbedoTexture();
-		glUniform1i(glGetUniformLocation(lightShader->GetProgram(), "diffuseTex"), currentTexture);
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, currentTexture);
 
-		currentTexture = n->GetBumpTexture();
-		glUniform1i(glGetUniformLocation(lightShader->GetProgram(), "bumpTex"), currentTexture);
-		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, currentTexture);
-
-		modelMatrix.ToIdentity();
-		textureMatrix.ToIdentity();
-
+		glUniform1i(glGetUniformLocation(rockShader->GetProgram(), "useTexture"), currentTexture);
 		UpdateShaderMatrices();
 		//readjust model matrix, so it matches the values we actually want, though.
 		glUniformMatrix4fv(glGetUniformLocation(rockShader->GetProgram(), "modelMatrix"), 1, false, model.values);
