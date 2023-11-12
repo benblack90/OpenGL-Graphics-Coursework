@@ -31,8 +31,11 @@ public:
 	float GetCameraDistance() const { return distanceFromCamera; }
 	void SetCameraDistance(float f) { distanceFromCamera = f; }
 
-	GLuint GetTexture() const { return texture; }
-	void SetTexture(GLuint tex) { texture = tex; }
+	GLuint GetAlbedoTexture() const { return albedoTex; }
+	void SetAlbedoTexture(GLuint tex) { albedoTex = tex; }
+
+	GLuint GetBumpTexture() const { return bumpTex; }
+	void SetBumpTexture(GLuint tex) { bumpTex = tex; }
 
 	void AddChild(SceneNode* s);
 	void RemoveChild(SceneNode* s);
@@ -53,5 +56,6 @@ protected:
 	std::vector<SceneNode*> children;			//vector of all children, readable via the public getter methods for the const iterator
 	float distanceFromCamera;					//self explanatory!
 	float boundingRadius;						//radius of the sphere bounding the node
-	GLuint texture;								//the node's texture
+	GLuint albedoTex;							//the node's albedo texture
+	GLuint bumpTex;								//the node's bump texture
 };

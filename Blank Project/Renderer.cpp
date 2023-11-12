@@ -20,7 +20,8 @@ Renderer::Renderer(Window& parent)
 	rockShader = new Shader("SceneVertex.glsl", "SceneFragment.glsl");
 	if (!rockShader->LoadSuccess()) return;
 	SceneNode* s = new SceneNode();
-	s->SetTexture(SOIL_load_OGL_texture(TEXTUREDIR"Barren Reds.JPG", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS));
+	s->SetAlbedoTexture(SOIL_load_OGL_texture(TEXTUREDIR"Barren Reds.JPG", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS));
+	s->SetBumpTexture(SOIL_load_OGL_texture(TEXTUREDIR"Barren RedsDOT3.JPG", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS));
 	s->SetColour(Vector4(1.0f, 1.0f, 1.0f, 1.0f));
 	s->SetTransform(Matrix4::Translation(heightmapSize * Vector3(0.5f, 1.0f, 0.5f)));
 	s->SetModelScale(Vector3(1.0f, 1.0f, 1.0f));
@@ -58,7 +59,6 @@ void Renderer::LoadCubeMap()
 		TEXTUREDIR"starbox_back.png",
 		SOIL_LOAD_RGB, SOIL_CREATE_NEW_ID, 0);
 	skyboxShader = new Shader("skyboxVertex.glsl", "skyboxFragment.glsl");
-	skyboxTransform = Matrix4::Translation(Vector3(0, 0, 0));
 	if ( !skyboxShader->LoadSuccess() || !cubeMap) return;
 }
 
@@ -77,7 +77,7 @@ void Renderer::LoadTerrain()
 void Renderer::UpdateScene(float dt)
 {
 	camera->UpdateCamera(dt);
-	skyboxTransform = Matrix4::Rotation(1, Vector3(0,0,1));
+	worldTransform = Matrix4::Rotation(1, Vector3(0,0,1));
 	viewMatrix = camera->BuildViewMatrix(); 
 	frameFrustum.FromMatrix(projMatrix * viewMatrix);
 
@@ -120,7 +120,6 @@ void Renderer::DrawSkyBox()
 	glDepthMask(GL_FALSE);
 	BindShader(skyboxShader);
 	UpdateShaderMatrices();
-	glUniformMatrix4fv(glGetUniformLocation(skyboxShader->GetProgram(), "modelMatrix"), 1, false, skyboxTransform.values);
 	quad->Draw();
 	glDepthMask(GL_TRUE);
 }
@@ -130,18 +129,23 @@ void Renderer::DrawNode(SceneNode* n)
 	if (n->GetMesh())
 	{
 		Matrix4 model = n->GetWorldTransform() * Matrix4::Scale(n->GetModelScale());
-		BindShader(rockShader);
+		BindShader(lightShader);
+		SetShaderLight(*light);
 
-		
-
-
-		glUniform4fv(glGetUniformLocation(rockShader->GetProgram(), "nodeColour"), 1, (float*)&n->GetColour());
-
-		currentTexture = n->GetTexture();
+		glUniform3fv(glGetUniformLocation(lightShader->GetProgram(), "cameraPos"), 1, (float*)&camera->GetPosition());
+		currentTexture = n->GetAlbedoTexture();
+		glUniform1i(glGetUniformLocation(lightShader->GetProgram(), "diffuseTex"), currentTexture);
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, currentTexture);
 
-		glUniform1i(glGetUniformLocation(rockShader->GetProgram(), "useTexture"), currentTexture);
+		currentTexture = n->GetBumpTexture();
+		glUniform1i(glGetUniformLocation(lightShader->GetProgram(), "bumpTex"), currentTexture);
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, currentTexture);
+
+		modelMatrix.ToIdentity();
+		textureMatrix.ToIdentity();
+
 		UpdateShaderMatrices();
 		//readjust model matrix, so it matches the values we actually want, though.
 		glUniformMatrix4fv(glGetUniformLocation(rockShader->GetProgram(), "modelMatrix"), 1, false, model.values);

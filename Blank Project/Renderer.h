@@ -38,5 +38,5 @@ protected:
 	GLuint cubeMap;
 	GLuint currentTexture;
 	Frustum frameFrustum;
-	Matrix4 skyboxTransform;
+	Matrix4 worldTransform;
 };

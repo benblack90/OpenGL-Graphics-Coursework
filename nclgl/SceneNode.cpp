@@ -8,7 +8,8 @@ SceneNode::SceneNode(Mesh* mesh, Vector4 colour)
 	modelScale = Vector3(1, 1, 1);
 	boundingRadius = 1.0f;
 	distanceFromCamera = 0.0f;
-	texture = 0;
+	albedoTex = 0;
+	bumpTex = 0;
 }
 
 //NOTE how this destructor does not destroy its mesh. This is because multiple scene nodes may point to the same mesh, and we don't want to delete the mesh when 
