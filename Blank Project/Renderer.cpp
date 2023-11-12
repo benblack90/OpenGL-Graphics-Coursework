@@ -58,6 +58,7 @@ void Renderer::LoadCubeMap()
 		TEXTUREDIR"starbox_back.png",
 		SOIL_LOAD_RGB, SOIL_CREATE_NEW_ID, 0);
 	skyboxShader = new Shader("skyboxVertex.glsl", "skyboxFragment.glsl");
+	skyboxTransform = Matrix4::Translation(Vector3(0, 0, 0));
 	if ( !skyboxShader->LoadSuccess() || !cubeMap) return;
 }
 
@@ -76,7 +77,8 @@ void Renderer::LoadTerrain()
 void Renderer::UpdateScene(float dt)
 {
 	camera->UpdateCamera(dt);
-	viewMatrix = camera->BuildViewMatrix();
+	skyboxTransform = Matrix4::Rotation(1, Vector3(0,0,1));
+	viewMatrix = camera->BuildViewMatrix(); 
 	frameFrustum.FromMatrix(projMatrix * viewMatrix);
 
 	root->Update(dt);
@@ -118,6 +120,7 @@ void Renderer::DrawSkyBox()
 	glDepthMask(GL_FALSE);
 	BindShader(skyboxShader);
 	UpdateShaderMatrices();
+	glUniformMatrix4fv(glGetUniformLocation(skyboxShader->GetProgram(), "modelMatrix"), 1, false, skyboxTransform.values);
 	quad->Draw();
 	glDepthMask(GL_TRUE);
 }
