@@ -8,7 +8,7 @@ Renderer::Renderer(Window& parent)
 	:OGLRenderer(parent)
 {
 	camera = new Camera(-30.f, 315.0f, 0.0f, Vector3(-8.0f, 5.0f, 8.0f));
-	light = new Light(Vector3(-20.0f, 10.0f, -20.0f), Vector4(1, 1, 1, 1), 250.0f);
+	light = new PointLight(Vector3(-20.0f, 10.0f, -20.0f), Vector4(1, 1, 1, 1), 250.0f);
 
 	sceneShader = new Shader("shadowscenevert.glsl", "shadowscenefrag.glsl");
 	shadowShader = new Shader("shadowVert.glsl", "shadowFrag.glsl");
@@ -109,7 +109,7 @@ void Renderer::DrawShadowScene()
 void Renderer::DrawMainScene()
 {
 	BindShader(sceneShader);
-	SetShaderLight(*light);
+	SetShaderPointLight(*light);
 	viewMatrix = camera->BuildViewMatrix();
 	projMatrix = Matrix4::Perspective(1.0f, 15000.0f, (float)width / (float)height, 45.0f);
 	glUniform1i(glGetUniformLocation(sceneShader->GetProgram(), "diffuseTex"), 0);

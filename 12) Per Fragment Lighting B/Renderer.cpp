@@ -7,8 +7,8 @@ Renderer::Renderer(Window& parent)
 	:OGLRenderer(parent)
 {
 	heightMap = new HeightMap(TEXTUREDIR"heightmapfjord.png");
-	texture = SOIL_load_OGL_texture(TEXTUREDIR"Barren Reds.JPG", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
-	bumpmap = SOIL_load_OGL_texture(TEXTUREDIR"Barren RedsDOT3.JPG", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+	texture = SOIL_load_OGL_texture(TEXTUREDIR"TCom_Sand_Muddy2_2x2_512_albedo.JPG", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+	bumpmap = SOIL_load_OGL_texture(TEXTUREDIR"TCom_Sand_Muddy2_2x2_512_roughness.JPG", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
 	shader = new Shader("bumpVertex.glsl", "bumpFragment.glsl");
 	if (!shader->LoadSuccess() || !texture || !bumpmap) return;
 
@@ -16,9 +16,9 @@ Renderer::Renderer(Window& parent)
 	SetTextureRepeating(bumpmap, true);
 
 	Vector3 heightmapSize = heightMap->GetHeightmapSize();
-	camera = new Camera(-45.0f, 0.0f, 0, heightmapSize * Vector3(0.5f, 1.0f, 0.5f));
+	camera = new Camera(-15.0f, 0.0f, 0, heightmapSize * Vector3(0.5f, 1.0f, 0.5f));
 
-	light = new Light(heightmapSize * Vector3(0.5f, 1.5f, 0.5f), Vector4(1, 1, 1, 1), heightmapSize.x * 0.5f);
+	light = new PointLight(heightmapSize * Vector3(0.5f, 1.5f, 0.75f), Vector4(1, 1, 1, 1), heightmapSize.x * 0.5f);
 
 	projMatrix = Matrix4::Perspective(1.0f, 15000.0f, (float)width / (float)height, 45.0f);
 
@@ -38,6 +38,8 @@ void Renderer::UpdateScene(float dt)
 {
 	camera->UpdateCamera(dt);
 	viewMatrix = camera->BuildViewMatrix();
+	light->SetPosition(camera->GetPosition());
+
 }
 
 void Renderer::RenderScene()
@@ -55,6 +57,6 @@ void Renderer::RenderScene()
 	glUniform3fv(glGetUniformLocation(shader->GetProgram(), "cameraPos"), 1, (float*)&camera->GetPosition());
 
 	UpdateShaderMatrices();
-	SetShaderLight(*light);
+	SetShaderPointLight(*light);
 	heightMap->Draw();
 }

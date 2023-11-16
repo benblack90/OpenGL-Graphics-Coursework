@@ -5,8 +5,11 @@ uniform sampler2D bumpTex;
 uniform sampler2D shadowTex;
 uniform vec4 lightColour;
 uniform vec3 lightPos;
+uniform vec3 lightDir;
 uniform vec3 cameraPos;
 uniform float lightRadius;
+uniform float minDotProd;
+uniform float dimProdMin;
 
 in Vertex{
 	vec3 colour;
@@ -21,39 +24,49 @@ in Vertex{
 out vec4 fragColour;
 
 void main(void) {
+
 	vec3 incident = normalize(lightPos - IN.worldPos);
+
+	float lambert = 0;
+	float specFactor = 0;
+	float attenuation = 0;
+	float shadow = 1.0;
+	float ringDiff = dimProdMin - minDotProd;
+	float intensity = 1.0;
+	
+	
 	vec3 viewDir = normalize(cameraPos - IN.worldPos);
 	vec3 halfDir = normalize(incident + viewDir);
 	mat3 TBN = mat3(normalize(IN.tangent),normalize(IN.binormal), normalize(IN.normal));
 	vec4 diffuse = texture(diffuseTex, IN.texCoord);
 	vec3 normal = texture(bumpTex, IN.texCoord).rgb;
-
-	normal = normalize(TBN * normal * 2.0 - 1.0);
-
-	float lambert = max(dot(incident, normal), 0.0f);
-	float distance = length(lightPos - IN.worldPos);
-	float attenuation = 1.0f - clamp(distance / lightRadius, 0.0, 1.0);
-
-	float specFactor = clamp(dot(halfDir, normal), 0.0, 1.0);
-	specFactor = pow(specFactor, 60.0);
-
-	float shadow = 1.0;
+	normal = normalize(TBN * normalize(normal * 2.0 - 1.0));
+	float dotProd = dot(-lightDir,incident);
+	if(dotProd > minDotProd) {
+		lambert = max(dot(incident, normal), 0.0f);
+		float distance = length(lightPos - IN.worldPos);
+		attenuation = 1.0f - clamp(distance / lightRadius, 0.0, 1.0);
+		specFactor = clamp(dot(halfDir, normal), 0.0, 1.0);
+		specFactor = pow(specFactor, 5.0);			
+		intensity = clamp((dotProd - minDotProd) / ringDiff, 0.0, 1.0);
 
 	vec3 shadowNDC = IN.shadowProj.xyz / IN.shadowProj.w;
-	if(abs(shadowNDC.x) < 1.0f &&
-	abs(shadowNDC.y) < 1.0f &&
-	abs(shadowNDC.z) < 1.0f) {
-		vec3 biasCoord = shadowNDC * 0.5f + 0.5f;
-		float shadowZ = texture(shadowTex, biasCoord.xy).x;
-		if(shadowZ < biasCoord.z) {
-			shadow = 0.0f;
+		if(abs(shadowNDC.x) < 1.0f &&
+		abs(shadowNDC.y) < 1.0f &&
+		abs(shadowNDC.z) < 1.0f) {
+			vec3 biasCoord = shadowNDC * 0.5f + 0.5f;
+			float shadowZ = texture(shadowTex, biasCoord.xy).x;
+			if(shadowZ < biasCoord.z) {
+				shadow = 0.0f;
+			}
 		}
 	}
-
+	
 	vec3 surface = (diffuse.rgb * lightColour.rgb);
-	fragColour.rgb = surface * attenuation * lambert;
-	fragColour.rgb += (lightColour.rgb * attenuation * specFactor) * 0.33;
+	fragColour.rgb = surface * attenuation * lambert * intensity;
+	fragColour.rgb += lightColour.rgb * specFactor * attenuation * 0.33;
 	fragColour.rgb *= shadow;
-	fragColour.rgb += shadow * 0.1f;
+	fragColour.rgb += surface * 0.1f;
+	fragColour = mix(fragColour, vec4(0.75,0.1,0.25,1),0.1);
 	fragColour.a = diffuse.a;
 }

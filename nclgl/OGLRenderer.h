@@ -37,6 +37,7 @@ _-_-_-_-_-_-_-""  ""
 #include "Mesh.h"
 #include "Light.h"
 
+
 using std::vector;
 
 #define OPENGL_DEBUGGING
@@ -81,7 +82,9 @@ protected:
 	int		width;			//Render area width (not quite the same as window width)
 	int		height;			//Render area height (not quite the same as window height)
 	bool	init;			//Did the renderer initialise properly?
-	void SetShaderLight(const Light& l);
+	void SetShaderPointLight(const PointLight& l);
+	void SetShaderDirectionLight(const DirectionLight& l);
+	void SetShaderSpotlight(const Spotlight& l);
 
 private:
 	Shader* currentShader;	

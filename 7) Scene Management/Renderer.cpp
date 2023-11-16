@@ -70,11 +70,7 @@ void Renderer::BuildNodeLists(SceneNode* from)
 		//dot product of self is magnitude squared
 		from->SetCameraDistance(Vector3::Dot(dir, dir));
 
-		if (from->GetColour().w < 1.0f)
-		{
-			transparentNodeList.push_back(from);
-		}
-		else
+	
 		{
 			nodeList.push_back(from);
 		}

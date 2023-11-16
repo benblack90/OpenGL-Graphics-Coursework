@@ -3,10 +3,10 @@
 SceneNode::SceneNode(Mesh* mesh, Vector4 colour)
 {
 	this->mesh = mesh;
+	if (mesh) boundingRadius = mesh->GenerateBoundingValues();
 	this->colour = colour;
 	parent = nullptr;
 	modelScale = Vector3(1, 1, 1);
-	boundingRadius = 1.0f;
 	distanceFromCamera = 0.0f;
 	albedoTex = 0;
 	bumpTex = 0;
@@ -30,6 +30,8 @@ void SceneNode::AddChild(SceneNode* s)
 		std::cout << "ERROR: Failed to add child, because pointer passed was pointer to self" << '\n';
 		return;
 	}
+	if (s->mesh) 
+		s->boundingRadius = s->mesh->GenerateBoundingValues();
 	children.push_back(s);
 	s->parent = this;
 }

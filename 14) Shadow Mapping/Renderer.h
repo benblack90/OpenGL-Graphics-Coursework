@@ -27,5 +27,5 @@ protected:
 	vector<Matrix4> sceneTransforms;
 
 	Camera* camera;
-	Light* light;
+	PointLight* light;
 };

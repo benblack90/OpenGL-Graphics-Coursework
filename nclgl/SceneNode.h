@@ -47,6 +47,7 @@ public:
 	std::vector<SceneNode*>::const_iterator GetChildIteratorEnd() { return children.end(); }
 
 protected:
+
 	SceneNode* parent;							//pointer to parent
 	Mesh* mesh;									//pointer to mesh
 	Matrix4 worldTransform;						//world coordinates matrix
@@ -55,7 +56,7 @@ protected:
 	Vector4 colour;								//colour vector							
 	std::vector<SceneNode*> children;			//vector of all children, readable via the public getter methods for the const iterator
 	float distanceFromCamera;					//self explanatory!
-	float boundingRadius;						//radius of the sphere bounding the node
+	float boundingRadius = 1.0f;				//radius of the sphere bounding the node
 	GLuint albedoTex;							//the node's albedo texture
 	GLuint bumpTex;								//the node's bump texture
 };

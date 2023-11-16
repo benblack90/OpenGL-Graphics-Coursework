@@ -267,9 +267,25 @@ void OGLRenderer::SetTextureRepeating(GLuint target, bool repeating)
 	glBindTexture(GL_TEXTURE_2D, 0);
 }
 
-void OGLRenderer::SetShaderLight(const Light& l)
+void OGLRenderer::SetShaderPointLight(const PointLight& l)
 {
 	glUniform3fv(glGetUniformLocation(currentShader->GetProgram(), "lightPos"), 1, (float*) &l.GetPosition());
 	glUniform4fv(glGetUniformLocation(currentShader->GetProgram(), "lightColour"), 1, (float*) &l.GetColour());
 	glUniform1f(glGetUniformLocation(currentShader->GetProgram(), "lightRadius"), l.GetRadius());
+}
+
+void OGLRenderer::SetShaderDirectionLight(const DirectionLight& l)
+{
+	glUniform3fv(glGetUniformLocation(currentShader->GetProgram(), "lightDir"), 1, (float*)&l.GetDirection());
+	glUniform4fv(glGetUniformLocation(currentShader->GetProgram(), "lightColour"), 1, (float*)&l.GetColour());
+}
+
+void OGLRenderer::SetShaderSpotlight(const Spotlight& l)
+{
+	glUniform3fv(glGetUniformLocation(currentShader->GetProgram(), "lightPos"), 1, (float*)&l.GetPosition());
+	glUniform4fv(glGetUniformLocation(currentShader->GetProgram(), "lightColour"), 1, (float*)&l.GetColour());
+	glUniform1f(glGetUniformLocation(currentShader->GetProgram(), "lightRadius"), l.GetRadius());
+	glUniform3fv(glGetUniformLocation(currentShader->GetProgram(), "lightDir"), 1, (float*)&l.GetDirection());
+	glUniform1f(glGetUniformLocation(currentShader->GetProgram(), "minDotProd"), l.GetDotProdMin());
+	glUniform1f(glGetUniformLocation(currentShader->GetProgram(), "dimProdMin"), l.GetDimProdMin());
 }

@@ -2,6 +2,7 @@
 #include "../nclgl/OGLRenderer.h"
 #include "../nclgl/SceneNode.h"
 #include "../nclgl/Frustum.h"
+#include "../nclgl/Light.h"
 
 
 class HeightMap;
@@ -23,20 +24,29 @@ protected:
 	void DrawSkyBox();
 	void DrawHeightMap();
 	void DrawNode(SceneNode* n);
+	void Renderer::BuildNodeLists(SceneNode* from);
+	void Renderer::DrawShadowScene();
 
 	HeightMap* heightMap;
 	Mesh* quad;
 	Shader* lightShader;
+	Shader* shadowShader;
 	Shader* reflectShader;
 	Shader* skyboxShader;
-	Shader* rockShader;
 	SceneNode* root;
 	Camera* camera;
-	Light* light;
+	PointLight* light;
+	DirectionLight* sun;
+	Spotlight* spotlight;
 	GLuint heightmapTex;
 	GLuint heightmapBump;
 	GLuint cubeMap;
 	GLuint currentTexture;
+	GLuint shadowTex;
+	GLuint shadowFBO;
+	float sceneTime;
 	Frustum frameFrustum;
 	Matrix4 worldTransform;
+
+	vector<SceneNode*> nodeList;
 };

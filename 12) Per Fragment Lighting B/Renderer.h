@@ -4,7 +4,7 @@
 
 class HeightMap;
 class Camera;
-class Light;
+class PointLight;
 class Shader;
 
 class Renderer : public OGLRenderer
@@ -19,7 +19,7 @@ protected:
 	HeightMap* heightMap;
 	Shader* shader;
 	Camera* camera;
-	Light* light;
+	PointLight* light;
 	GLuint texture;
 	GLuint bumpmap;
 };
