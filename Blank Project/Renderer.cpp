@@ -24,8 +24,10 @@ Renderer::Renderer(Window& parent)
 	s->SetColour(Vector4(1.0f, 1.0f, 1.0f, 1.0f));
 	s->SetTransform(Matrix4::Translation(heightmapSize * Vector3(0.45f, 0.60f, 0.45f)));
 	s->SetModelScale(Vector3(1.0f, 1.0f, 1.0f));
+
+
 	//s->SetBoundingRadius(1.0f);
-	s->SetMesh(Mesh::LoadFromMeshFile("rock_01.msh"));
+	s->SetMesh(Mesh::LoadFromMeshFile("rock_02.msh"));
 	root->AddChild(s);
 
 	LoadCubeMap();
@@ -202,8 +204,8 @@ void Renderer::DrawShadowScene()
 
 	BindShader(shadowShader);
 
-	viewMatrix = Matrix4::BuildViewMatrix(spotlight->GetPosition(),spotlight->GetDirection());
-	projMatrix = Matrix4::Perspective(10, 15000, 1, 45);
+	viewMatrix = Matrix4::BuildViewMatrixFromNormal(spotlight->GetPosition(),spotlight->GetDirection(), Vector3(0,1,0));
+	projMatrix = Matrix4::Perspective(1, 15000, 1, 60);
 	shadowMatrix = projMatrix * viewMatrix;
 	
 	//heightMap->Draw();
