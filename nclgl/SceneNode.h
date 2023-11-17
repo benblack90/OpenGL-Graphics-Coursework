@@ -37,6 +37,9 @@ public:
 	GLuint GetBumpTexture() const { return bumpTex; }
 	void SetBumpTexture(GLuint tex) { bumpTex = tex; }
 
+	Shader* GetShader() const { return shader; }
+	void SetShader(Shader* shader) { this->shader = shader; }
+
 	void AddChild(SceneNode* s);
 	void RemoveChild(SceneNode* s);
 
@@ -50,6 +53,7 @@ protected:
 
 	SceneNode* parent;							//pointer to parent
 	Mesh* mesh;									//pointer to mesh
+	Shader* shader;								//pointer to shader
 	Matrix4 worldTransform;						//world coordinates matrix
 	Matrix4 transform;							//local (to parent) coordinates matrix
 	Vector3 modelScale;							//scaling vector, separate from transforms

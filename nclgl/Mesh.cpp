@@ -591,7 +591,7 @@ Vector4 Mesh::GenerateTangent(int a, int b, int c)
 float Mesh::GenerateBoundingValues()
 {
 	float x = 0;
-	for (int i = 0; i < numVertices; i++)
+	for (unsigned int i = 0; i < numVertices; i++)
 	{
 		float temp1 = std::max(abs(vertices[i].x), abs(vertices[i].y));
 		float temp2 = std::max(temp1, abs(vertices[i].z));

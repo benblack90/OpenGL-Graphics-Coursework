@@ -34,9 +34,10 @@ protected:
 	Shader* reflectShader;
 	Shader* skyboxShader;
 	SceneNode* root;
+	SceneNode* sun;
 	Camera* camera;
 	PointLight* light;
-	DirectionLight* sun;
+	DirectionLight* sunLight;
 	Spotlight* spotlight;
 	GLuint heightmapTex;
 	GLuint heightmapBump;
@@ -47,6 +48,7 @@ protected:
 	float sceneTime;
 	Frustum frameFrustum;
 	Matrix4 worldTransform;
+	Vector3 pointToSun;
 
 	vector<SceneNode*> nodeList;
 };

@@ -14,8 +14,10 @@ Renderer::Renderer(Window& parent)
 	LoadTerrain();	
 	Vector3 heightmapSize = heightMap->GetHeightmapSize();
 	camera = new Camera(-15.0f, 0.0f, 0, heightmapSize * Vector3(0.5f, 1.0f, 0.5f));
+	
 
 	spotlight = new Spotlight(camera->GetPosition(), Vector4(1, 1, 1, 1), 5000, 40);
+	sunLight = new DirectionLight(Vector3(0, -1, 0), Vector4(1, 1, 1, 1));
 
 	root = new SceneNode();
 	SceneNode* s = new SceneNode();
@@ -24,14 +26,25 @@ Renderer::Renderer(Window& parent)
 	s->SetColour(Vector4(1.0f, 1.0f, 1.0f, 1.0f));
 	s->SetTransform(Matrix4::Translation(heightmapSize * Vector3(0.45f, 0.60f, 0.45f)));
 	s->SetModelScale(Vector3(1.0f, 1.0f, 1.0f));
-
-
-	//s->SetBoundingRadius(1.0f);
+	s->SetShader(lightShader);
 	s->SetMesh(Mesh::LoadFromMeshFile("rock_02.msh"));
 	root->AddChild(s);
 
+	Shader* sunShader = new Shader("sunVert.glsl", "sunFrag.glsl");
+	if (!sunShader->LoadSuccess()) return;
+	sun = new SceneNode();
+	sun->SetAlbedoTexture(SOIL_load_OGL_texture(TEXTUREDIR"2K_sun.JPG", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS));
+	sun->SetColour(Vector4(1.0f, 1.0f, 1.0f, 1.0f));
+	sun->SetModelScale(Vector3(500.0f, 500.0f, 500.0f));
+	sun->SetShader(sunShader);	
+	sun->SetMesh(Mesh::LoadFromMeshFile("Sphere.msh"));
+	root->AddChild(sun);
+
+	pointToSun = Vector3(0, 1, 0);
+	sun->SetTransform(Matrix4::Translation(camera->GetPosition() + pointToSun * 50000) * Matrix4::Rotation(90, Vector3(1,0,0)));
+
 	LoadCubeMap();
-	projMatrix = Matrix4::Perspective(1.0f, 15000.0f, (float)width / (float)height, 45.0f);
+	projMatrix = Matrix4::Perspective(1.0f, 150000.0f, (float)width / (float)height, 45.0f);
 
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_BLEND);
@@ -100,6 +113,9 @@ void Renderer::UpdateScene(float dt)
 	viewMatrix = camera->BuildViewMatrix();
 	sceneTime += dt;
 	spotlight->SetPosition(Matrix4::Translation(Vector3(0,-100,0))*camera->GetPosition());
+	pointToSun = Matrix4::Rotation(dt * 1, Vector3(1,0,0)) * pointToSun;
+	sun->SetTransform(Matrix4::Translation(camera->GetPosition() + pointToSun * 50000) * Matrix4::Rotation(90, Vector3(1, 0, 0)));
+
 	Matrix4 yaw = Matrix4::Rotation(camera->GetYaw() + (sinf(sceneTime) * 20), Vector3(0, 1, 0));
 	Matrix4 pitch = Matrix4::Rotation(camera->GetPitch() - 10, Vector3(1, 0, 0));
 	Vector3 forward = (yaw * pitch * Vector3(0, 0, -1));
@@ -116,9 +132,8 @@ void Renderer::RenderScene()
 	//rebuild and sort, before drawing
 	BuildNodeLists(root);
 	std::sort(nodeList.begin(), nodeList.end(), SceneNode::CompareByCameraDistance);
-	
-	DrawShadowScene();
-	DrawSkyBox();	
+	DrawSkyBox();
+	DrawShadowScene();		
 	DrawHeightMap();
 
 	
@@ -133,7 +148,7 @@ void Renderer::DrawHeightMap()
 	BindShader(lightShader);
 	SetShaderSpotlight(*spotlight);
 	viewMatrix = camera->BuildViewMatrix();
-	projMatrix = Matrix4::Perspective(1.0f, 15000.0f, (float)width / (float)height, 45.0f);
+	projMatrix = Matrix4::Perspective(1.0f, 1500000.0f, (float)width / (float)height, 45.0f);
 	glUniform1i(glGetUniformLocation(lightShader->GetProgram(), "diffuseTex"), 0);
 	glUniform3fv(glGetUniformLocation(lightShader->GetProgram(), "cameraPos"), 1, (float*)&camera->GetPosition());	
 	glActiveTexture(GL_TEXTURE0);
@@ -165,6 +180,7 @@ void Renderer::DrawNode(SceneNode* n)
 {
 	if (n->GetMesh())
 	{
+		BindShader(n->GetShader());
 		Matrix4 model = n->GetWorldTransform() * Matrix4::Scale(n->GetModelScale());
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, n->GetAlbedoTexture());
@@ -172,7 +188,7 @@ void Renderer::DrawNode(SceneNode* n)
 		glBindTexture(GL_TEXTURE_2D, n->GetBumpTexture());
 		UpdateShaderMatrices();
 		//readjust model matrix, so it matches the values we actually want, though.
-		glUniformMatrix4fv(glGetUniformLocation(lightShader->GetProgram(), "modelMatrix"), 1, false, model.values);
+		glUniformMatrix4fv(glGetUniformLocation(n->GetShader()->GetProgram(), "modelMatrix"), 1, false, model.values);
 		n->Draw(*this);
 	}
 }
