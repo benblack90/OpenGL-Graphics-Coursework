@@ -204,6 +204,8 @@ void Renderer::DrawNode(SceneNode* n)
 		glActiveTexture(GL_TEXTURE1);
 		glBindTexture(GL_TEXTURE_2D, n->GetBumpTexture());
 		UpdateShaderMatrices();
+		glUniformMatrix4fv(glGetUniformLocation(n->GetShader()->GetProgram(), "shadowMatrix1"), 1, false, shMapTex[0].shadowMatrix.values);
+		glUniformMatrix4fv(glGetUniformLocation(n->GetShader()->GetProgram(), "shadowMatrix2"), 1, false, shMapTex[1].shadowMatrix.values);
 		//readjust model matrix, so it matches the values we actually want, though.
 		glUniformMatrix4fv(glGetUniformLocation(n->GetShader()->GetProgram(), "modelMatrix"), 1, false, model.values);
 		n->Draw(*this);
@@ -229,28 +231,32 @@ void Renderer::BuildNodeLists(SceneNode* from)
 
 void Renderer::DrawShadowScene()
 {
-	glBindFramebuffer(GL_FRAMEBUFFER, shMapTex[0].shadowFBO);
-	glClear(GL_DEPTH_BUFFER_BIT);
-	glViewport(0, 0, SHADOWSIZE, SHADOWSIZE);
-	//turn off colours for the shadow pass
-	glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
-
-	BindShader(shadowShader);
-
-	viewMatrix = Matrix4::BuildViewMatrixFromNormal(spotlight->GetPosition(),spotlight->GetDirection(), Vector3(0,1,0));
-	projMatrix = Matrix4::Perspective(1, 15000, 1, 60);
-	shadowMatrix = projMatrix * viewMatrix;
-	
-	//heightMap->Draw();
-	for (SceneNode* s : nodeList)
+	for (int i = 0; i < lights.size(); i++)
 	{
-		modelMatrix = s->GetWorldTransform();
-		UpdateShaderMatrices();
-		s->Draw(*this);
+		glBindFramebuffer(GL_FRAMEBUFFER, shMapTex[0].shadowFBO);
+		glClear(GL_DEPTH_BUFFER_BIT);
+		glViewport(0, 0, SHADOWSIZE, SHADOWSIZE);
+		//turn off colours for the shadow pass
+		glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+
+		BindShader(shadowShader);
+
+		viewMatrix = Matrix4::BuildViewMatrixFromNormal(spotlight->GetPosition(), spotlight->GetDirection(), Vector3(0, 1, 0));
+		projMatrix = Matrix4::Perspective(1, 15000, 1, 60);
+		shMapTex[i].shadowMatrix = projMatrix * viewMatrix;
+
+		//heightMap->Draw();
+		for (SceneNode* s : nodeList)
+		{
+			modelMatrix = s->GetWorldTransform();
+			UpdateShaderMatrices();
+			s->Draw(*this);
+		}
+		modelMatrix.ToIdentity();
+		viewMatrix.ToIdentity();
+		projMatrix.ToIdentity();
 	}
-	modelMatrix.ToIdentity();
-	viewMatrix.ToIdentity();
-	projMatrix.ToIdentity();
+	
 
 	//turn colours back on!
 	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);

@@ -1,6 +1,7 @@
 #pragma once
 #include "Vector4.h"
 #include "Vector3.h"
+#include <string>
 
 /*Abstract class for different light types: abstract, because in order to be fully general, the light has neither a position, nor a direction*/
 class Light
@@ -10,9 +11,11 @@ public:
 	virtual ~Light() = 0 {};
 	Vector4 GetColour() const { return colour; }
 	void SetColour(const Vector4& val) { colour = val; }
+	std::string GetName() const { return name; }
 
 protected:
 	Vector4 colour;
+	std::string name;
 };
 
 /*Direction light. All rays come from a single direction. Constructor ensures this value is a normal, for easy calculations*/
@@ -24,6 +27,7 @@ public:
 		direction.Normalise();
 		this->direction = direction;
 		this->colour = colour;
+		name = "direction";
 	}
 
 	~DirectionLight(void) {};
@@ -44,6 +48,7 @@ public:
 		this->position = position;
 		this->colour = colour;
 		this->radius = radius;
+		name = "point";
 	}
 
 	~PointLight(void) {};
@@ -73,6 +78,7 @@ public:
 		//2 degrees of extra softer light
 		dimProdMin = cosf(((angle - 2) / 2) * (PI / 180));
 		direction = Vector3(0, 0, -1);
+		name = "spot";
 	}
 	~Spotlight(void) {};
 	float GetAngle() const { return angle; }

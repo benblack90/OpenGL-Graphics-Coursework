@@ -19,10 +19,12 @@ in Vertex{
 	vec3 tangent;
 	vec3 binormal;
 	vec3 worldPos;
-	vec4 shadowProj;
+	vec4 shadowProj1;
+	vec4 shadowProj2;
 } IN;
 
 out vec4 fragColour;
+
 
 void main(void) {
 
@@ -51,7 +53,7 @@ void main(void) {
 		specFactor = pow(specFactor, 5.0);			
 		intensity = clamp((dotProd - minDotProd) / ringDiff, 0.0, 1.0);
 
-	vec3 shadowNDC = IN.shadowProj.xyz / IN.shadowProj.w;
+	vec3 shadowNDC = IN.shadowProj1.xyz / IN.shadowProj1.w;
 		if(abs(shadowNDC.x) < 1.0f &&
 		abs(shadowNDC.y) < 1.0f &&
 		abs(shadowNDC.z) < 1.0f) {

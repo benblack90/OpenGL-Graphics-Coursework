@@ -14,6 +14,7 @@ struct ShadowMapTex
 {
 	GLuint shadowTex;
 	GLuint shadowFBO;
+	Matrix4 shadowMatrix;
 };
 
 class Renderer : public OGLRenderer
