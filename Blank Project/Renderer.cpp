@@ -18,6 +18,7 @@ Renderer::Renderer(Window& parent)
 
 	spotlight = new Spotlight(camera->GetPosition(), Vector4(1, 1, 1, 1), 5000, 40);
 	sunLight = new DirectionLight(Vector3(0, -1, 0), Vector4(1, 1, 1, 1));
+	GenerateShadowFBOs();
 
 	root = new SceneNode();
 	SceneNode* s = new SceneNode();
@@ -42,6 +43,7 @@ Renderer::Renderer(Window& parent)
 
 	pointToSun = Vector3(0, 1, 0);
 	sun->SetTransform(Matrix4::Translation(camera->GetPosition() + pointToSun * 50000) * Matrix4::Rotation(90, Vector3(1,0,0)));
+	sunlightOrigin = Vector3(0.5, 0, 0.5) * heightMap->GetHeightmapSize() + pointToSun * 50000;
 
 	LoadCubeMap();
 	projMatrix = Matrix4::Perspective(1.0f, 150000.0f, (float)width / (float)height, 45.0f);
@@ -85,7 +87,15 @@ void Renderer::LoadTerrain()
 	lightShader = new Shader("shadowscenevert.glsl", "shadowscenefrag.glsl");
 	shadowShader = new Shader("shadowVert.glsl", "shadowFrag.glsl");
 	if (!lightShader->LoadSuccess() || !shadowShader->LoadSuccess() || !heightmapTex || !heightmapBump) return;
+	
+	SetTextureRepeating(heightmapTex, true);
+	SetTextureRepeating(heightmapBump, true);
+	
+	glEnable(GL_DEPTH_TEST);
+}
 
+void Renderer::GenerateShadowFBOs()
+{
 	glGenTextures(1, &shadowTex);
 	glBindTexture(GL_TEXTURE_2D, shadowTex);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -100,11 +110,6 @@ void Renderer::LoadTerrain()
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, shadowTex, 0);
 	glDrawBuffer(GL_NONE);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	
-	SetTextureRepeating(heightmapTex, true);
-	SetTextureRepeating(heightmapBump, true);
-	
-	glEnable(GL_DEPTH_TEST);
 }
 
 void Renderer::UpdateScene(float dt)
@@ -115,6 +120,7 @@ void Renderer::UpdateScene(float dt)
 	spotlight->SetPosition(Matrix4::Translation(Vector3(0,-100,0))*camera->GetPosition());
 	pointToSun = Matrix4::Rotation(dt * 1, Vector3(1,0,0)) * pointToSun;
 	sun->SetTransform(Matrix4::Translation(camera->GetPosition() + pointToSun * 50000) * Matrix4::Rotation(90, Vector3(1, 0, 0)));
+	sunlightOrigin = Vector3(0.5, 0, 0.5) * heightMap->GetHeightmapSize() + pointToSun * 50000;
 
 	Matrix4 yaw = Matrix4::Rotation(camera->GetYaw() + (sinf(sceneTime) * 20), Vector3(0, 1, 0));
 	Matrix4 pitch = Matrix4::Rotation(camera->GetPitch() - 10, Vector3(1, 0, 0));
@@ -158,10 +164,14 @@ void Renderer::DrawHeightMap()
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, heightmapBump);
 	
-	glUniform1i(glGetUniformLocation(lightShader->GetProgram(), "shadowTex"), 2);
+	glUniform1i(glGetUniformLocation(lightShader->GetProgram(), "shadowTex1"), 2);
 	glActiveTexture(GL_TEXTURE2);
 	glBindTexture(GL_TEXTURE_2D, shadowTex);
-	
+	/*
+	glUniform1i(glGetUniformLocation(lightShader->GetProgram(), "shadowTex2"), 3);
+	glActiveTexture(GL_TEXTURE3);
+	glBindTexture(GL_TEXTURE_2D, shadowTex);
+	*/
 	UpdateShaderMatrices();
 
 	heightMap->Draw();
@@ -240,3 +250,4 @@ void Renderer::DrawShadowScene()
 	glViewport(0, 0, width, height);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
+
