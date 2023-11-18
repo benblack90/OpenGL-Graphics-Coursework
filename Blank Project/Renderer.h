@@ -34,6 +34,7 @@ protected:
 	void BuildNodeLists(SceneNode* from);
 	void DrawShadowScene();
 	void GenerateShadowFBOs();
+	void PlaceRock(float x, float z);
 
 	HeightMap* heightMap;
 	Mesh* quad;

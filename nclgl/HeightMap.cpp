@@ -17,14 +17,19 @@ HeightMap::HeightMap(const std::string& name)
 	vertices = new Vector3[numVertices];
 	textureCoords = new Vector2[numVertices];
 	indices = new GLuint[numIndices];
-
-	Vector3 vertexScale = Vector3(16.0f, 6.0f, 16.0f);
+	xScale = zScale = 16.0f;
+	yScale = 6.0f;
+	Vector3 vertexScale = Vector3(xScale, yScale, zScale);
 	Vector2 textureScale = Vector2(1 / 16.0f, 1 / 16.0f);
 
 	for (int z = 0; z < iHeight; ++z)
 	{
 		for (int x = 0; x < iWidth; ++x)
 		{
+			if (x == 4900/16 && z == 7757/16)
+			{
+				int xTina = 12;
+			}
 			int offset = (z * iWidth) + x;
 			vertices[offset] = Vector3(x, data[offset], z) * vertexScale;
 			textureCoords[offset] = Vector2(x, z) * textureScale;
@@ -60,6 +65,14 @@ HeightMap::HeightMap(const std::string& name)
 	heightmapSize.x = vertexScale.x * (iWidth - 1);
 	heightmapSize.y = vertexScale.y * 255.0f;
 	heightmapSize.z = vertexScale.z * (iHeight - 1);
+}
+
+float HeightMap::GetHeightAtXZ(float x, float z)
+{
+	int xIndex = x / xScale;
+	int zIndex = z / zScale;
+	int index = (heightmapSize.x/xScale + 1) * zIndex + xIndex;
+	return vertices[index].y;
 }
 
 

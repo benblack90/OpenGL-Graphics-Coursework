@@ -22,15 +22,14 @@ Renderer::Renderer(Window& parent)
 	GenerateShadowFBOs();
 
 	root = new SceneNode();
-	SceneNode* s = new SceneNode();
-	s->SetAlbedoTexture(SOIL_load_OGL_texture(TEXTUREDIR"Barren Reds.JPG", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS));
-	s->SetBumpTexture(SOIL_load_OGL_texture(TEXTUREDIR"Barren RedsDOT3.JPG", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS));
-	s->SetColour(Vector4(1.0f, 1.0f, 1.0f, 1.0f));
-	s->SetTransform(Matrix4::Translation(heightmapSize * Vector3(0.45f, 0.60f, 0.45f)));
-	s->SetModelScale(Vector3(1.0f, 1.0f, 1.0f));
-	s->SetShader(lightShader);
-	s->SetMesh(Mesh::LoadFromMeshFile("rock_02.msh"));
-	root->AddChild(s);
+	PlaceRock(400*16, 410*16);
+	PlaceRock(410 * 16, 490 * 16);
+	PlaceRock(300 * 16, 470 * 16);
+	PlaceRock(399 * 16, 308 * 16);
+	PlaceRock(426 * 16, 400 * 16);
+	PlaceRock(314 * 16, 499 * 16);
+
+
 
 	Shader* sunShader = new Shader("sunVert.glsl", "sunFrag.glsl");
 	if (!sunShader->LoadSuccess()) return;
@@ -177,8 +176,6 @@ void Renderer::DrawHeightMap()
 		glActiveTexture(GL_TEXTURE2 + i);
 		glBindTexture(GL_TEXTURE_2D, shMapTex[i].shadowTex);
 	}
-	
-	
 	UpdateShaderMatrices();
 
 	heightMap->Draw();
@@ -204,6 +201,7 @@ void Renderer::DrawNode(SceneNode* n)
 		glActiveTexture(GL_TEXTURE1);
 		glBindTexture(GL_TEXTURE_2D, n->GetBumpTexture());
 		UpdateShaderMatrices();
+		//shadow matrices are stored in shMapTex instead of on OGL renderer, so need to add them here
 		glUniformMatrix4fv(glGetUniformLocation(n->GetShader()->GetProgram(), "shadowMatrix1"), 1, false, shMapTex[0].shadowMatrix.values);
 		glUniformMatrix4fv(glGetUniformLocation(n->GetShader()->GetProgram(), "shadowMatrix2"), 1, false, shMapTex[1].shadowMatrix.values);
 		//readjust model matrix, so it matches the values we actually want, though.
@@ -245,7 +243,6 @@ void Renderer::DrawShadowScene()
 		projMatrix = Matrix4::Perspective(1, 15000, 1, 60);
 		shMapTex[i].shadowMatrix = projMatrix * viewMatrix;
 
-		//heightMap->Draw();
 		for (SceneNode* s : nodeList)
 		{
 			modelMatrix = s->GetWorldTransform();
@@ -262,5 +259,18 @@ void Renderer::DrawShadowScene()
 	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 	glViewport(0, 0, width, height);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+void Renderer::PlaceRock(float x, float z)
+{
+	SceneNode* s = new SceneNode();
+	s->SetAlbedoTexture(SOIL_load_OGL_texture(TEXTUREDIR"Barren Reds.JPG", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS));
+	s->SetBumpTexture(SOIL_load_OGL_texture(TEXTUREDIR"Barren RedsDOT3.JPG", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS));
+	s->SetColour(Vector4(1.0f, 1.0f, 1.0f, 1.0f));
+	s->SetTransform(Matrix4::Translation(Vector3(x, heightMap->GetHeightAtXZ(x, z), z)));
+	s->SetModelScale(Vector3(1.0f, 1.0f, 1.0f));
+	s->SetShader(lightShader);
+	s->SetMesh(Mesh::LoadFromMeshFile("rock_01.msh"));
+	root->AddChild(s);
 }
 
