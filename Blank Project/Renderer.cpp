@@ -17,6 +17,8 @@ Renderer::Renderer(Window& parent)
 
 	spotlight = new Spotlight(camera->GetPosition(), Vector4(1, 1, 1, 1), 5000, 40);
 	sunLight = new DirectionLight(Vector3(0, -1, 0), Vector4(1, 1, 1, 1));
+	lights.push_back(spotlight);
+	lights.push_back(sunLight);
 	GenerateShadowFBOs();
 
 	root = new SceneNode();
@@ -95,20 +97,23 @@ void Renderer::LoadTerrain()
 
 void Renderer::GenerateShadowFBOs()
 {
-	glGenTextures(1, &shMapTex[0].shadowTex);
-	glBindTexture(GL_TEXTURE_2D, shMapTex[0].shadowTex);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	for (int i = 0; i < lights.size(); i++)
+	{
+		glGenTextures(1, &shMapTex[i].shadowTex);
+		glBindTexture(GL_TEXTURE_2D, shMapTex[i].shadowTex);
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOWSIZE, SHADOWSIZE, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
-	glBindTexture(GL_TEXTURE_2D, 0);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOWSIZE, SHADOWSIZE, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+		glBindTexture(GL_TEXTURE_2D, 0);
 
-	glGenFramebuffers(1, &shMapTex[0].shadowFBO);
-	glBindFramebuffer(GL_FRAMEBUFFER, shMapTex[0].shadowFBO);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, shMapTex[0].shadowTex, 0);
-	glDrawBuffer(GL_NONE);
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glGenFramebuffers(1, &shMapTex[i].shadowFBO);
+		glBindFramebuffer(GL_FRAMEBUFFER, shMapTex[i].shadowFBO);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, shMapTex[i].shadowTex, 0);
+		glDrawBuffer(GL_NONE);
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	}	
 }
 
 void Renderer::UpdateScene(float dt)
@@ -163,14 +168,17 @@ void Renderer::DrawHeightMap()
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, heightmapBump);
 	
-	glUniform1i(glGetUniformLocation(lightShader->GetProgram(), "shadowTex1"), 2);
-	glActiveTexture(GL_TEXTURE2);
-	glBindTexture(GL_TEXTURE_2D, shMapTex[0].shadowTex);
-	/*
-	glUniform1i(glGetUniformLocation(lightShader->GetProgram(), "shadowTex2"), 3);
-	glActiveTexture(GL_TEXTURE3);
-	glBindTexture(GL_TEXTURE_2D, shadowTex);
-	*/
+	for (char i = 0; i < lights.size(); i++)
+	{
+		char name[11] = { "shadowTexN"};
+		name[9] = i + 49;
+
+		glUniform1i(glGetUniformLocation(lightShader->GetProgram(), name), i + 2);
+		glActiveTexture(GL_TEXTURE2 + i);
+		glBindTexture(GL_TEXTURE_2D, shMapTex[i].shadowTex);
+	}
+	
+	
 	UpdateShaderMatrices();
 
 	heightMap->Draw();

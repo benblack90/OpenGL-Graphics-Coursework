@@ -43,7 +43,6 @@ protected:
 	SceneNode* root;
 	SceneNode* sun;
 	Camera* camera;
-	PointLight* light;
 	DirectionLight* sunLight;
 	Spotlight* spotlight;
 	GLuint heightmapTex;
@@ -59,4 +58,5 @@ protected:
 	Vector3 sunlightOrigin;
 
 	vector<SceneNode*> nodeList;
+	vector<Light*> lights;
 };
