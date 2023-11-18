@@ -14,7 +14,6 @@ Renderer::Renderer(Window& parent)
 	LoadTerrain();	
 	Vector3 heightmapSize = heightMap->GetHeightmapSize();
 	camera = new Camera(-15.0f, 0.0f, 0, heightmapSize * Vector3(0.5f, 1.0f, 0.5f));
-	
 
 	spotlight = new Spotlight(camera->GetPosition(), Vector4(1, 1, 1, 1), 5000, 40);
 	sunLight = new DirectionLight(Vector3(0, -1, 0), Vector4(1, 1, 1, 1));
@@ -96,8 +95,8 @@ void Renderer::LoadTerrain()
 
 void Renderer::GenerateShadowFBOs()
 {
-	glGenTextures(1, &shadowTex);
-	glBindTexture(GL_TEXTURE_2D, shadowTex);
+	glGenTextures(1, &shMapTex[0].shadowTex);
+	glBindTexture(GL_TEXTURE_2D, shMapTex[0].shadowTex);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -105,9 +104,9 @@ void Renderer::GenerateShadowFBOs()
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOWSIZE, SHADOWSIZE, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
 	glBindTexture(GL_TEXTURE_2D, 0);
 
-	glGenFramebuffers(1, &shadowFBO);
-	glBindFramebuffer(GL_FRAMEBUFFER, shadowFBO);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, shadowTex, 0);
+	glGenFramebuffers(1, &shMapTex[0].shadowFBO);
+	glBindFramebuffer(GL_FRAMEBUFFER, shMapTex[0].shadowFBO);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, shMapTex[0].shadowTex, 0);
 	glDrawBuffer(GL_NONE);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
@@ -166,7 +165,7 @@ void Renderer::DrawHeightMap()
 	
 	glUniform1i(glGetUniformLocation(lightShader->GetProgram(), "shadowTex1"), 2);
 	glActiveTexture(GL_TEXTURE2);
-	glBindTexture(GL_TEXTURE_2D, shadowTex);
+	glBindTexture(GL_TEXTURE_2D, shMapTex[0].shadowTex);
 	/*
 	glUniform1i(glGetUniformLocation(lightShader->GetProgram(), "shadowTex2"), 3);
 	glActiveTexture(GL_TEXTURE3);
@@ -222,7 +221,7 @@ void Renderer::BuildNodeLists(SceneNode* from)
 
 void Renderer::DrawShadowScene()
 {
-	glBindFramebuffer(GL_FRAMEBUFFER, shadowFBO);
+	glBindFramebuffer(GL_FRAMEBUFFER, shMapTex[0].shadowFBO);
 	glClear(GL_DEPTH_BUFFER_BIT);
 	glViewport(0, 0, SHADOWSIZE, SHADOWSIZE);
 	//turn off colours for the shadow pass

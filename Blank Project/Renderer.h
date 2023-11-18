@@ -10,6 +10,12 @@ class Camera;
 class Light;
 class Shader;
 
+struct ShadowMapTex
+{
+	GLuint shadowTex;
+	GLuint shadowFBO;
+};
+
 class Renderer : public OGLRenderer
 {
 public:
@@ -44,8 +50,7 @@ protected:
 	GLuint heightmapBump;
 	GLuint cubeMap;
 	GLuint currentTexture;
-	GLuint shadowTex;
-	GLuint shadowFBO;
+	ShadowMapTex shMapTex[2];
 	float sceneTime;
 	Frustum frameFrustum;
 	Matrix4 worldTransform;
