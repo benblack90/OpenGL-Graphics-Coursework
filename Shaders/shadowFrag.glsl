@@ -3,5 +3,5 @@
 out vec4 fragColour;
 
 void main(void) {
-	fragColour = vec4(1.0);	
+	gl_FragDepth = gl_FragCoord.z;
 }

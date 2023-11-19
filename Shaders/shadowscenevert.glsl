@@ -5,7 +5,8 @@ uniform mat4 viewMatrix;
 uniform mat4 projMatrix;
 uniform mat4 shadowMatrix1;
 uniform mat4 shadowMatrix2;
-uniform vec3 lightPos;
+uniform vec3 spotlightPos;
+uniform vec3 dirlightDir;
 
 in vec3 position;
 in vec4 colour;
@@ -20,8 +21,8 @@ out Vertex{
 	vec3 tangent;
 	vec3 binormal;
 	vec3 worldPos;
-	vec4 shadowProj1;
-	vec4 shadowProj2;
+	vec4 shadowProjSpot;
+	vec4 shadowProjDir;
 } OUT;
 
 void main(void) {
@@ -41,9 +42,10 @@ void main(void) {
 
 	OUT.worldPos = worldPos.xyz;
 	gl_Position = (projMatrix * viewMatrix) * worldPos;
-	vec3 viewDir = normalize(lightPos - worldPos.xyz);
-	vec4 pushVal = vec4(OUT.normal, 0) * dot(viewDir, OUT.normal);
-	OUT.shadowProj1 = shadowMatrix1 * (worldPos + pushVal);
-	OUT.shadowProj2 = shadowMatrix2 * (worldPos + pushVal);
+	vec3 spotViewDir = normalize(spotlightPos - worldPos.xyz);
+	vec4 spotPushVal = vec4(OUT.normal, 0) * dot(spotViewDir, OUT.normal);
+	vec4 dirPushVal = vec4(OUT.normal, 0) * dot(dirlightDir, OUT.normal);
+	OUT.shadowProjSpot = shadowMatrix1 * (worldPos + spotPushVal);
+	OUT.shadowProjDir = shadowMatrix2 * (worldPos + dirPushVal);
 }
 

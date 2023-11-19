@@ -35,6 +35,7 @@ protected:
 	void DrawShadowScene();
 	void GenerateShadowFBOs();
 	void PlaceRock(float x, float z);
+	void ResetViewProjToCamera();
 
 	HeightMap* heightMap;
 	Mesh* quad;
@@ -56,8 +57,6 @@ protected:
 	Frustum frameFrustum;
 	Matrix4 worldTransform;
 	Vector3 pointToSun;
-	//NB sunlight originates from a different point than the sun model, because the sun model moves relative to the camera
-	Vector3 sunlightOrigin;
 
 	vector<SceneNode*> nodeList;
 	vector<Light*> lights;

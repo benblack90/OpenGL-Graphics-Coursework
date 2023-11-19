@@ -269,23 +269,23 @@ void OGLRenderer::SetTextureRepeating(GLuint target, bool repeating)
 
 void OGLRenderer::SetShaderPointLight(const PointLight& l)
 {
-	glUniform3fv(glGetUniformLocation(currentShader->GetProgram(), "lightPos"), 1, (float*) &l.GetPosition());
-	glUniform4fv(glGetUniformLocation(currentShader->GetProgram(), "lightColour"), 1, (float*) &l.GetColour());
-	glUniform1f(glGetUniformLocation(currentShader->GetProgram(), "lightRadius"), l.GetRadius());
+	glUniform3fv(glGetUniformLocation(currentShader->GetProgram(), "pointlightPos"), 1, (float*) &l.GetPosition());
+	glUniform4fv(glGetUniformLocation(currentShader->GetProgram(), "pointlightColour"), 1, (float*) &l.GetColour());
+	glUniform1f(glGetUniformLocation(currentShader->GetProgram(), "pointlightRadius"), l.GetRadius());
 }
 
 void OGLRenderer::SetShaderDirectionLight(const DirectionLight& l)
 {
-	glUniform3fv(glGetUniformLocation(currentShader->GetProgram(), "lightDir"), 1, (float*)&l.GetDirection());
-	glUniform4fv(glGetUniformLocation(currentShader->GetProgram(), "lightColour"), 1, (float*)&l.GetColour());
+	glUniform3fv(glGetUniformLocation(currentShader->GetProgram(), "dirlightDir"), 1, (float*)&l.GetDirection());
+	glUniform4fv(glGetUniformLocation(currentShader->GetProgram(), "dirlightColour"), 1, (float*)&l.GetColour());
 }
 
 void OGLRenderer::SetShaderSpotlight(const Spotlight& l)
 {
-	glUniform3fv(glGetUniformLocation(currentShader->GetProgram(), "lightPos"), 1, (float*)&l.GetPosition());
-	glUniform4fv(glGetUniformLocation(currentShader->GetProgram(), "lightColour"), 1, (float*)&l.GetColour());
-	glUniform1f(glGetUniformLocation(currentShader->GetProgram(), "lightRadius"), l.GetRadius());
-	glUniform3fv(glGetUniformLocation(currentShader->GetProgram(), "lightDir"), 1, (float*)&l.GetDirection());
+	glUniform3fv(glGetUniformLocation(currentShader->GetProgram(), "spotlightPos"), 1, (float*)&l.GetPosition());
+	glUniform4fv(glGetUniformLocation(currentShader->GetProgram(), "spotlightColour"), 1, (float*)&l.GetColour());
+	glUniform1f(glGetUniformLocation(currentShader->GetProgram(), "spotlightRadius"), l.GetRadius());
+	glUniform3fv(glGetUniformLocation(currentShader->GetProgram(), "spotlightDir"), 1, (float*)&l.GetDirection());
 	glUniform1f(glGetUniformLocation(currentShader->GetProgram(), "minDotProd"), l.GetDotProdMin());
 	glUniform1f(glGetUniformLocation(currentShader->GetProgram(), "dimProdMin"), l.GetDimProdMin());
 }

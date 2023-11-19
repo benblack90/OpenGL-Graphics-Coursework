@@ -13,10 +13,10 @@ Renderer::Renderer(Window& parent)
 	quad = Mesh::GenerateQuad();
 	LoadTerrain();	
 	Vector3 heightmapSize = heightMap->GetHeightmapSize();
-	camera = new Camera(-15.0f, 0.0f, 0, heightmapSize * Vector3(0.5f, 1.0f, 0.5f));
-
+	camera = new Camera(-15, 0.0f, 0, heightmapSize * Vector3(0.5f, 1.0f, 0.5f));
+	pointToSun = Vector3(0, 1, 0);
 	spotlight = new Spotlight(camera->GetPosition(), Vector4(1, 1, 1, 1), 5000, 40);
-	sunLight = new DirectionLight(Vector3(0, -1, 0), Vector4(1, 1, 1, 1));
+	sunLight = new DirectionLight(pointToSun, Vector4(1, 1, 1, 1));
 	lights.push_back(spotlight);
 	lights.push_back(sunLight);
 	GenerateShadowFBOs();
@@ -28,6 +28,10 @@ Renderer::Renderer(Window& parent)
 	PlaceRock(399 * 16, 308 * 16);
 	PlaceRock(426 * 16, 400 * 16);
 	PlaceRock(314 * 16, 499 * 16);
+	PlaceRock(0, 0);
+	PlaceRock(heightMap->GetHeightmapSize().x, 0);
+	PlaceRock(heightMap->GetHeightmapSize().x, heightMap->GetHeightmapSize().z);
+	PlaceRock(0, heightMap->GetHeightmapSize().z);
 
 
 
@@ -41,9 +45,8 @@ Renderer::Renderer(Window& parent)
 	sun->SetMesh(Mesh::LoadFromMeshFile("Sphere.msh"));
 	root->AddChild(sun);
 
-	pointToSun = Vector3(0, 1, 0);
+	
 	sun->SetTransform(Matrix4::Translation(camera->GetPosition() + pointToSun * 50000) * Matrix4::Rotation(90, Vector3(1,0,0)));
-	sunlightOrigin = Vector3(0.5, 0, 0.5) * heightMap->GetHeightmapSize() + pointToSun * 50000;
 
 	LoadCubeMap();
 	projMatrix = Matrix4::Perspective(1.0f, 150000.0f, (float)width / (float)height, 45.0f);
@@ -118,12 +121,12 @@ void Renderer::GenerateShadowFBOs()
 void Renderer::UpdateScene(float dt)
 {
 	camera->UpdateCamera(dt);
-	viewMatrix = camera->BuildViewMatrix();
+	ResetViewProjToCamera();
 	sceneTime += dt;
 	spotlight->SetPosition(Matrix4::Translation(Vector3(0,-100,0))*camera->GetPosition());
-	pointToSun = Matrix4::Rotation(dt * 1, Vector3(1,0,0)) * pointToSun;
+	pointToSun = Matrix4::Rotation(dt * 10, Vector3(1,0,0)) * pointToSun;
+	sunLight->SetDirection(pointToSun);
 	sun->SetTransform(Matrix4::Translation(camera->GetPosition() + pointToSun * 50000) * Matrix4::Rotation(90, Vector3(1, 0, 0)));
-	sunlightOrigin = Vector3(0.5, 0, 0.5) * heightMap->GetHeightmapSize() + pointToSun * 50000;
 
 	Matrix4 yaw = Matrix4::Rotation(camera->GetYaw() + (sinf(sceneTime) * 20), Vector3(0, 1, 0));
 	Matrix4 pitch = Matrix4::Rotation(camera->GetPitch() - 10, Vector3(1, 0, 0));
@@ -156,8 +159,8 @@ void Renderer::DrawHeightMap()
 {
 	BindShader(lightShader);
 	SetShaderSpotlight(*spotlight);
-	viewMatrix = camera->BuildViewMatrix();
-	projMatrix = Matrix4::Perspective(1.0f, 1500000.0f, (float)width / (float)height, 45.0f);
+	SetShaderDirectionLight(*sunLight);
+
 	glUniform1i(glGetUniformLocation(lightShader->GetProgram(), "diffuseTex"), 0);
 	glUniform3fv(glGetUniformLocation(lightShader->GetProgram(), "cameraPos"), 1, (float*)&camera->GetPosition());	
 	glActiveTexture(GL_TEXTURE0);
@@ -177,7 +180,9 @@ void Renderer::DrawHeightMap()
 		glBindTexture(GL_TEXTURE_2D, shMapTex[i].shadowTex);
 	}
 	UpdateShaderMatrices();
-
+	//shadow matrices are stored in shMapTex instead of on OGL renderer, so need to add them here
+	glUniformMatrix4fv(glGetUniformLocation(lightShader->GetProgram(), "shadowMatrix1"), 1, false, shMapTex[0].shadowMatrix.values);
+	glUniformMatrix4fv(glGetUniformLocation(lightShader->GetProgram(), "shadowMatrix2"), 1, false, shMapTex[1].shadowMatrix.values);
 	heightMap->Draw();
 }
 
@@ -231,7 +236,7 @@ void Renderer::DrawShadowScene()
 {
 	for (int i = 0; i < lights.size(); i++)
 	{
-		glBindFramebuffer(GL_FRAMEBUFFER, shMapTex[0].shadowFBO);
+		glBindFramebuffer(GL_FRAMEBUFFER, shMapTex[i].shadowFBO);
 		glClear(GL_DEPTH_BUFFER_BIT);
 		glViewport(0, 0, SHADOWSIZE, SHADOWSIZE);
 		//turn off colours for the shadow pass
@@ -239,26 +244,36 @@ void Renderer::DrawShadowScene()
 
 		BindShader(shadowShader);
 
-		viewMatrix = Matrix4::BuildViewMatrixFromNormal(spotlight->GetPosition(), spotlight->GetDirection(), Vector3(0, 1, 0));
-		projMatrix = Matrix4::Perspective(1, 15000, 1, 60);
+		if (lights[i]->GetName() == "spot")
+		{
+			viewMatrix = Matrix4::BuildViewMatrixFromNormal(spotlight->GetPosition(), spotlight->GetDirection(), Vector3(0, 1, 0));
+			projMatrix = Matrix4::Perspective(100, 5000, 1, 60);
+		}
+		else
+		{
+			viewMatrix = Matrix4::BuildViewMatrixFromNormal(Vector3(0.5, 0, 0.5) * heightMap->GetHeightmapSize(), -pointToSun, Vector3(0, 0, -1));
+			projMatrix = Matrix4::Orthographic(-heightMap->GetHeightmapSize().x / 2, heightMap->GetHeightmapSize().x / 2,
+				heightMap->GetHeightmapSize().x / 2, -heightMap->GetHeightmapSize().x / 2,
+				heightMap->GetHeightmapSize().z / 2, -heightMap->GetHeightmapSize().z / 2);
+		}
 		shMapTex[i].shadowMatrix = projMatrix * viewMatrix;
-
+		
 		for (SceneNode* s : nodeList)
 		{
 			modelMatrix = s->GetWorldTransform();
 			UpdateShaderMatrices();
 			s->Draw(*this);
 		}
+		
 		modelMatrix.ToIdentity();
 		viewMatrix.ToIdentity();
 		projMatrix.ToIdentity();
-	}
-	
-
-	//turn colours back on!
-	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-	glViewport(0, 0, width, height);
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		//turn colours back on!
+		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+		glViewport(0, 0, width, height);
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	}	
+	ResetViewProjToCamera();
 }
 
 void Renderer::PlaceRock(float x, float z)
@@ -270,7 +285,13 @@ void Renderer::PlaceRock(float x, float z)
 	s->SetTransform(Matrix4::Translation(Vector3(x, heightMap->GetHeightAtXZ(x, z), z)));
 	s->SetModelScale(Vector3(1.0f, 1.0f, 1.0f));
 	s->SetShader(lightShader);
-	s->SetMesh(Mesh::LoadFromMeshFile("rock_01.msh"));
+	s->SetMesh(Mesh::LoadFromMeshFile("Rock_01.msh"));
 	root->AddChild(s);
+}
+
+void Renderer::ResetViewProjToCamera()
+{	
+	viewMatrix = camera->BuildViewMatrix();
+	projMatrix = Matrix4::Perspective(1.0f, 150000.0f, (float)width / (float)height, 45.0f);	
 }
 
