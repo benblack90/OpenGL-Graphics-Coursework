@@ -37,6 +37,9 @@ public:
 	GLuint GetBumpTexture() const { return bumpTex; }
 	void SetBumpTexture(GLuint tex) { bumpTex = tex; }
 
+	GLuint GetCubeTexture() const { return cubeTex; }
+	void SetCubeTexture(GLuint tex) { cubeTex = tex; }
+
 	Shader* GetShader() const { return shader; }
 	void SetShader(Shader* shader) { this->shader = shader; }
 
@@ -63,4 +66,5 @@ protected:
 	float boundingRadius = 1.0f;				//radius of the sphere bounding the node
 	GLuint albedoTex;							//the node's albedo texture
 	GLuint bumpTex;								//the node's bump texture
+	GLuint cubeTex;								//the node's cubemap texture, if it needs to reflect
 };

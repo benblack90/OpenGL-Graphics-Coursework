@@ -4,6 +4,7 @@ uniform sampler2D diffuseTex;
 uniform sampler2D bumpTex;
 uniform sampler2D shadowTex1;
 uniform sampler2D shadowTex2;
+uniform samplerCube cubeTex;
 uniform vec4 spotlightColour;
 uniform vec3 spotlightPos;
 uniform vec3 spotlightDir;
@@ -13,7 +14,6 @@ uniform float minDotProd;
 uniform float dimProdMin;
 uniform vec4 dirlightColour;
 uniform vec3 dirlightDir;
-uniform float dirHorizonCheck;
 
 in Vertex{
 	vec3 colour;
@@ -72,20 +72,21 @@ void main(void) {
 	normal = normalize(TBN * normalize(normal * 2.0 - 1.0));
 	vec4 diffuseTex = texture(diffuseTex, IN.texCoord);
 
-	vec3 dirDiffuse = CalculateDiffuse(diffuseTex, attenuation, dirlightDir,normal) * dirHorizonCheck;
-	vec3 dirSpecular = CalculateSpecular(dirlightDir, viewDir, normal, attenuation) * dirHorizonCheck;
-	float dirShadow = CalculateShadow(IN.shadowProjDir, shadowTex2) * dirHorizonCheck;
-	
+	vec3 dirDiffuse = CalculateDiffuse(diffuseTex, attenuation, dirlightDir,normal);
+	vec3 dirSpecular = CalculateSpecular(dirlightDir, viewDir, normal, attenuation);
+	float dirShadow = CalculateShadow(IN.shadowProjDir, shadowTex2);
 	vec3 spotDiffuse;
 	vec3 spotSpecular;
 	float spotShadow = 1.0;
+	vec3 reflectDir = reflect(-viewDir, normalize(IN.normal));
+	vec4 reflectTex = texture(cubeTex, reflectDir);
 
 	vec3 spotIncident = normalize(spotlightPos - IN.worldPos);	
-	float spotDotProd = dot(-spotlightDir,spotIncident);
-	if(spotDotProd > minDotProd) {
+	float dotProd = dot(-spotlightDir,spotIncident);
+	if(dotProd > minDotProd) {
 		float distance = length(spotlightPos - IN.worldPos);
 		attenuation = 1.0f - clamp(distance / spotlightRadius, 0.0, 1.0);
-		float intensity = clamp((spotDotProd - minDotProd) / ringDiff, 0.0, 1.0);
+		float intensity = clamp((dotProd - minDotProd) / ringDiff, 0.0, 1.0);
 		spotDiffuse = CalculateDiffuse(diffuseTex, attenuation, spotIncident, normal) * intensity;		
 		spotSpecular = CalculateSpecular(spotIncident, viewDir, normal, attenuation);
 		spotShadow = CalculateShadow(IN.shadowProjSpot, shadowTex1);		
@@ -94,8 +95,8 @@ void main(void) {
 	vec3 surface = diffuseTex.rgb * dirlightColour.rgb;
 	fragColour.rgb = spotDiffuse + dirDiffuse;
 	fragColour.rgb += spotSpecular + dirSpecular;
-	fragColour.rgb *= (spotShadow + dirShadow) / 2;
+	fragColour.rgb *= spotShadow * dirShadow;
 	fragColour.rgb += surface * 0.1f;
-	fragColour = mix(fragColour, vec4(0.95,0.1,0.25,1),0.1);
+	fragColour += reflectTex + (diffuseTex * 0.25f); 
 	fragColour.a = diffuseTex.a;
 }

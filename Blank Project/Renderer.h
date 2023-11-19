@@ -34,7 +34,7 @@ protected:
 	void BuildNodeLists(SceneNode* from);
 	void DrawShadowScene();
 	void GenerateShadowFBOs();
-	void PlaceRock(float x, float z);
+	void PlaceRock(float x, float z, GLuint albedo, GLuint bump);
 	void ResetViewProjToCamera();
 
 	HeightMap* heightMap;
@@ -51,7 +51,10 @@ protected:
 	GLuint heightmapTex;
 	GLuint heightmapBump;
 	GLuint cubeMap;
-	GLuint currentTexture;
+	GLuint rockAlbedo;
+	GLuint rockBump;
+	GLuint metallicAlbedo;
+	GLuint metallicBump;
 	ShadowMapTex shMapTex[2];
 	float sceneTime;
 	Frustum frameFrustum;

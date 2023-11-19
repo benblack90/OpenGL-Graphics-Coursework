@@ -20,25 +20,23 @@ Renderer::Renderer(Window& parent)
 	lights.push_back(spotlight);
 	lights.push_back(sunLight);
 	GenerateShadowFBOs();
-
+	rockAlbedo = SOIL_load_OGL_texture(TEXTUREDIR"Barren Reds.JPG", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+	rockBump = SOIL_load_OGL_texture(TEXTUREDIR"Barren RedsDOT3.JPG", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
 	root = new SceneNode();
-	PlaceRock(400*16, 410*16);
-	PlaceRock(410 * 16, 490 * 16);
-	PlaceRock(300 * 16, 470 * 16);
-	PlaceRock(399 * 16, 308 * 16);
-	PlaceRock(426 * 16, 400 * 16);
-	PlaceRock(314 * 16, 499 * 16);
-	PlaceRock(0, 0);
-	PlaceRock(heightMap->GetHeightmapSize().x, 0);
-	PlaceRock(heightMap->GetHeightmapSize().x, heightMap->GetHeightmapSize().z);
-	PlaceRock(0, heightMap->GetHeightmapSize().z);
-
+	PlaceRock(400*16, 410*16, rockAlbedo, rockBump);
+	PlaceRock(410 * 16, 490 * 16, rockAlbedo, rockBump);
+	PlaceRock(300 * 16, 470 * 16, rockAlbedo, rockBump);
+	PlaceRock(399 * 16, 308 * 16, rockAlbedo, rockBump);
+	PlaceRock(426 * 16, 400 * 16, rockAlbedo, rockBump);
+	PlaceRock(314 * 16, 499 * 16, rockAlbedo, rockBump);
 
 
 	Shader* sunShader = new Shader("sunVert.glsl", "sunFrag.glsl");
 	if (!sunShader->LoadSuccess()) return;
 	sun = new SceneNode();
-	sun->SetAlbedoTexture(SOIL_load_OGL_texture(TEXTUREDIR"2K_sun.JPG", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS));
+	GLuint sunTex = SOIL_load_OGL_texture(TEXTUREDIR"2K_sun.JPG", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+	SetTextureRepeating(sunTex, true);
+	sun->SetAlbedoTexture(sunTex);
 	sun->SetColour(Vector4(1.0f, 1.0f, 1.0f, 1.0f));
 	sun->SetModelScale(Vector3(500.0f, 500.0f, 500.0f));
 	sun->SetShader(sunShader);	
@@ -56,6 +54,8 @@ Renderer::Renderer(Window& parent)
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 	sceneTime = 0.0f;
+
+	
 	init = true;
 }
 
@@ -79,7 +79,8 @@ void Renderer::LoadCubeMap()
 		TEXTUREDIR"starbox_back.png",
 		SOIL_LOAD_RGB, SOIL_CREATE_NEW_ID, 0);
 	skyboxShader = new Shader("skyboxVertex.glsl", "skyboxFragment.glsl");
-	if (!skyboxShader->LoadSuccess() || !cubeMap) return;
+	reflectShader = new Shader("shadowscenevert.glsl", "shadowreflectingfrag.glsl");
+	if (!skyboxShader->LoadSuccess() || !reflectShader->LoadSuccess() || !cubeMap) return;
 }
 
 void Renderer::LoadTerrain()
@@ -124,7 +125,7 @@ void Renderer::UpdateScene(float dt)
 	ResetViewProjToCamera();
 	sceneTime += dt;
 	spotlight->SetPosition(Matrix4::Translation(Vector3(0,-100,0))*camera->GetPosition());
-	pointToSun = Matrix4::Rotation(dt * 10, Vector3(1,0,0)) * pointToSun;
+	pointToSun = Matrix4::Rotation(dt * 5, Vector3(1,0,0)) * pointToSun;
 	sunLight->SetDirection(pointToSun);
 	sun->SetTransform(Matrix4::Translation(camera->GetPosition() + pointToSun * 50000) * Matrix4::Rotation(90, Vector3(1, 0, 0)));
 
@@ -206,6 +207,11 @@ void Renderer::DrawNode(SceneNode* n)
 		glActiveTexture(GL_TEXTURE1);
 		glBindTexture(GL_TEXTURE_2D, n->GetBumpTexture());
 		UpdateShaderMatrices();
+
+		//deal with the sun lighting rocks sticking through the ground being 'lit' from below
+		float horizonCheck = std::min(Vector3::Dot(pointToSun, Vector3(0, 1, 0)) * 10, 1.0f);
+		if (horizonCheck < 0) horizonCheck = 0;
+		glUniform1f(glGetUniformLocation(n->GetShader()->GetProgram(), "dirHorizonCheck"), horizonCheck);
 		//shadow matrices are stored in shMapTex instead of on OGL renderer, so need to add them here
 		glUniformMatrix4fv(glGetUniformLocation(n->GetShader()->GetProgram(), "shadowMatrix1"), 1, false, shMapTex[0].shadowMatrix.values);
 		glUniformMatrix4fv(glGetUniformLocation(n->GetShader()->GetProgram(), "shadowMatrix2"), 1, false, shMapTex[1].shadowMatrix.values);
@@ -251,8 +257,8 @@ void Renderer::DrawShadowScene()
 		}
 		else
 		{
-			viewMatrix = Matrix4::BuildViewMatrixFromNormal(Vector3(0.5, 0, 0.5) * heightMap->GetHeightmapSize(), -pointToSun, Vector3(0, 0, -1));
-			projMatrix = Matrix4::Orthographic(-heightMap->GetHeightmapSize().x / 2, heightMap->GetHeightmapSize().x / 2,
+			viewMatrix = Matrix4::BuildViewMatrixFromNormal(Vector3(0.5, 0, 0.5) * heightMap->GetHeightmapSize() + pointToSun * heightMap->GetHeightmapSize().x, -pointToSun, Vector3(0, 0, -1));
+			projMatrix = Matrix4::Orthographic(0, heightMap->GetHeightmapSize().x * 2,
 				heightMap->GetHeightmapSize().x / 2, -heightMap->GetHeightmapSize().x / 2,
 				heightMap->GetHeightmapSize().z / 2, -heightMap->GetHeightmapSize().z / 2);
 		}
@@ -276,11 +282,11 @@ void Renderer::DrawShadowScene()
 	ResetViewProjToCamera();
 }
 
-void Renderer::PlaceRock(float x, float z)
+void Renderer::PlaceRock(float x, float z, GLuint albedo, GLuint bump)
 {
 	SceneNode* s = new SceneNode();
-	s->SetAlbedoTexture(SOIL_load_OGL_texture(TEXTUREDIR"Barren Reds.JPG", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS));
-	s->SetBumpTexture(SOIL_load_OGL_texture(TEXTUREDIR"Barren RedsDOT3.JPG", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS));
+	s->SetAlbedoTexture(albedo);
+	s->SetBumpTexture(bump);
 	s->SetColour(Vector4(1.0f, 1.0f, 1.0f, 1.0f));
 	s->SetTransform(Matrix4::Translation(Vector3(x, heightMap->GetHeightAtXZ(x, z), z)));
 	s->SetModelScale(Vector3(1.0f, 1.0f, 1.0f));
@@ -293,5 +299,6 @@ void Renderer::ResetViewProjToCamera()
 {	
 	viewMatrix = camera->BuildViewMatrix();
 	projMatrix = Matrix4::Perspective(1.0f, 150000.0f, (float)width / (float)height, 45.0f);	
+
 }
 
