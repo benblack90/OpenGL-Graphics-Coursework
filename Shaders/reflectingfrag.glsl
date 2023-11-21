@@ -26,20 +26,20 @@ in Vertex{
 out vec4 fragColour;
 
 
-vec3 CalculateDiffuse(vec4 diffuseTex, float attenuation, vec3 incident, vec3 normal)
+vec3 CalculateDiffuse(float attenuation, vec3 incident, vec3 normal, vec4 lightColour)
 {
 	float lambert = max(dot(incident, normal), 0.0f);
-	vec3 diffuseLight = (diffuseTex.rgb * spotlightColour.rgb) * attenuation * lambert;
+	vec3 diffuseLight = lightColour.rgb * attenuation * lambert;
 
 	return diffuseLight;
 }
 
-vec3 CalculateSpecular(vec3 incident, vec3 viewDir, vec3 normal, float attenuation)
+vec3 CalculateSpecular(vec3 incident, vec3 viewDir, vec3 normal, float attenuation, vec4 lightColour)
 {
 	vec3 halfDir = normalize(incident + viewDir);
 	float specFactor = clamp(dot(halfDir, normal), 0.0, 1.0);
-	specFactor = pow(specFactor, 5.0);	
-	vec3 specularLight = spotlightColour.rgb * specFactor * attenuation * 0.33;
+	specFactor = pow(specFactor, 50.0);	
+	vec3 specularLight = lightColour.rgb * specFactor * attenuation * 0.33;
 	return specularLight;
 }
 
@@ -54,27 +54,34 @@ void main(void) {
 	normal = normalize(TBN * normalize(normal * 2.0 - 1.0));
 	vec4 diffuseTex = texture(diffuseTex, IN.texCoord);
 
-	vec3 dirDiffuse = CalculateDiffuse(diffuseTex, attenuation, dirlightDir,normal) * dirHorizonCheck;
-	vec3 dirSpecular = CalculateSpecular(dirlightDir, viewDir, normal, attenuation) * dirHorizonCheck;
+	vec3 dirDiffuse = CalculateDiffuse(attenuation, dirlightDir,normal, dirlightColour) * dirHorizonCheck;
+	vec3 dirSpecular = CalculateSpecular(dirlightDir, viewDir, normal, attenuation, dirlightColour) * dirHorizonCheck;
 	vec3 spotDiffuse;
 	vec3 spotSpecular;
 	vec3 reflectDir = reflect(-viewDir, normalize(IN.normal));
 	vec4 reflectTex = textureLod(cubeTex, reflectDir,1.5);
 
 	vec3 spotIncident = normalize(spotlightPos - IN.worldPos);	
-	float dotProd = dot(-spotlightDir,spotIncident);
-	if(dotProd > minDotProd) {
+	float spotDotProd = dot(-spotlightDir,spotIncident);
+	vec3 ambient = 0.3 * diffuseTex.rgb * dirlightColour.rgb;
+	vec3 diffuse = dirDiffuse * dirlightColour.rgb;
+	vec3 specular = dirSpecular;
+
+	if(spotDotProd > minDotProd) {
 		float distance = length(spotlightPos - IN.worldPos);
 		attenuation = 1.0f - clamp(distance / spotlightRadius, 0.0, 1.0);
-		float intensity = clamp((dotProd - minDotProd) / ringDiff, 0.0, 1.0);
-		spotDiffuse = CalculateDiffuse(diffuseTex, attenuation, spotIncident, normal) * intensity;		
-		spotSpecular = CalculateSpecular(spotIncident, viewDir, normal, attenuation);	
+		float intensity = clamp((spotDotProd - minDotProd) / ringDiff, 0.0, 1.0);
+		spotDiffuse = CalculateDiffuse(attenuation, spotIncident, normal, spotlightColour) * intensity;		
+		spotSpecular = CalculateSpecular(spotIncident, viewDir, normal, attenuation, spotlightColour);	
+		ambient *= spotlightColour.rgb;
+		diffuse += spotDiffuse;
+		specular += spotSpecular;
 	}
 
-	vec3 surface = diffuseTex.rgb * dirlightColour.rgb;
-	fragColour.rgb = spotDiffuse + dirDiffuse;
-	fragColour.rgb += spotSpecular + dirSpecular;
-	fragColour.rgb += surface * 0.1f;
-	fragColour += reflectTex + (diffuseTex * 0.25f); 
+
+	vec3 lighting = (ambient + (diffuse + specular)) * diffuseTex.rgb;
+	fragColour = vec4(lighting,1);
+	fragColour += reflectTex + (diffuseTex * 0.25);
+	
 	fragColour.a = diffuseTex.a;
 }

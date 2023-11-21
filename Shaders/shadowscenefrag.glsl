@@ -29,10 +29,10 @@ in Vertex{
 out vec4 fragColour;
 
 
-vec3 CalculateDiffuse(vec4 diffuseTex, float attenuation, vec3 incident, vec3 normal, vec4 lightColour)
+vec3 CalculateDiffuse(float attenuation, vec3 incident, vec3 normal, vec4 lightColour)
 {
 	float lambert = max(dot(incident, normal), 0.0f);
-	vec3 diffuseLight = (diffuseTex.rgb * lightColour.rgb) * attenuation * lambert;
+	vec3 diffuseLight = lightColour.rgb * attenuation * lambert;
 
 	return diffuseLight;
 }
@@ -41,12 +41,12 @@ vec3 CalculateSpecular(vec3 incident, vec3 viewDir, vec3 normal, float attenuati
 {
 	vec3 halfDir = normalize(incident + viewDir);
 	float specFactor = clamp(dot(halfDir, normal), 0.0, 1.0);
-	specFactor = pow(specFactor, 5.0);	
+	specFactor = pow(specFactor, 50.0);	
 	vec3 specularLight = lightColour.rgb * specFactor * attenuation * 0.33;
 	return specularLight;
 }
 
-float CalculateShadow(vec4 shadowProj, sampler2D tex)
+float CalculateShadow(vec4 shadowProj, sampler2D tex, float shadowIntensity)
 {
 	float shadow = 1.0;
 	vec3 shadowNDC = shadowProj.xyz / shadowProj.w;
@@ -56,7 +56,7 @@ float CalculateShadow(vec4 shadowProj, sampler2D tex)
 			vec3 biasCoord = shadowNDC * 0.5f + 0.5f;
 			float shadowZ = texture(tex, biasCoord.xy).x;
 			if(shadowZ < biasCoord.z) {
-				shadow = 0.0f;
+				shadow = shadowIntensity;
 			}
 		}
 		return shadow;
@@ -72,31 +72,37 @@ void main(void) {
 	normal = normalize(TBN * normalize(normal * 2.0 - 1.0));
 	vec4 diffuseTex = texture(diffuseTex, IN.texCoord);
 
-	vec3 dirDiffuse = CalculateDiffuse(diffuseTex, attenuation, dirlightDir,normal, dirlightColour) * dirHorizonCheck;
+	vec3 dirDiffuse = CalculateDiffuse(attenuation, dirlightDir,normal, dirlightColour) * dirHorizonCheck;
 	vec3 dirSpecular = CalculateSpecular(dirlightDir, viewDir, normal, attenuation, dirlightColour) * dirHorizonCheck;
-	float dirShadow = CalculateShadow(IN.shadowProjDir, shadowTex2) * dirHorizonCheck;
+	float dirShadow = CalculateShadow(IN.shadowProjDir, shadowTex2, 0.5) * dirHorizonCheck;
 	
 	vec3 spotDiffuse;
 	vec3 spotSpecular;
-	float spotShadow = 0.0;
-	vec4 spotlightFinalColour = vec4(0,0,0,0);
 	vec3 spotIncident = normalize(spotlightPos - IN.worldPos);	
 	float spotDotProd = dot(-spotlightDir,spotIncident);
+	vec3 ambient = 0.3 * diffuseTex.rgb * dirlightColour.rgb;
+	vec3 diffuse = dirDiffuse * dirlightColour.rgb;
+	vec3 specular = dirSpecular;
+	float shadow = dirShadow;
+	
+
+
 	if(spotDotProd > minDotProd) {
 		float distance = length(spotlightPos - IN.worldPos);
 		attenuation = 1.0f - clamp(distance / spotlightRadius, 0.0, 1.0);
 		float intensity = clamp((spotDotProd - minDotProd) / ringDiff, 0.0, 1.0);
-		spotDiffuse = CalculateDiffuse(diffuseTex, attenuation, spotIncident, normal, spotlightColour) * intensity;		
+		spotDiffuse = CalculateDiffuse(attenuation, spotIncident, normal, spotlightColour) * intensity;		
 		spotSpecular = CalculateSpecular(spotIncident, viewDir, normal, attenuation, spotlightColour);
-		spotShadow = CalculateShadow(IN.shadowProjSpot, shadowTex1);
-		spotlightFinalColour = spotlightColour;
+		float spotShadow = CalculateShadow(IN.shadowProjSpot, shadowTex1, 0.25);
+		ambient *= spotlightColour.rgb;
+		diffuse += spotDiffuse;
+		specular += spotSpecular;
+		//factor in attenuation to deal with additive shadows making the range basically infinite!
+		shadow += spotShadow * attenuation;
 	}
 	
 	
-	vec3 ambient = 0.3 * diffuseTex.rgb * dirlightColour.rgb * spotlightColour.rgb;
-	vec3 diffuse = (spotDiffuse + dirDiffuse)* dirlightColour.rgb * spotlightColour.rgb;
-	vec3 specular = (spotSpecular + dirSpecular)* dirlightColour.rgb * spotlightColour.rgb;
-	float shadow = clamp(spotShadow + dirShadow,0.0,1.0);
+	
 	vec3 lighting = (ambient + shadow * (diffuse + specular)) * diffuseTex.rgb;
 	fragColour = vec4(lighting,1);
 	

@@ -118,7 +118,7 @@ void Renderer::LoadCubeMap()
 
 void Renderer::LoadTerrain()
 {
-	heightMap = new HeightMap(TEXTUREDIR"heightmapfjord.png", 16, 6, 16);
+	heightMap = new HeightMap(TEXTUREDIR"heightmapfjord.png", 16, 3, 16);
 	heightmapTexSand = SOIL_load_OGL_texture(TEXTUREDIR"TCom_Sand_Muddy2_2x2_512_albedo.JPG", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
 	heightmapBump = SOIL_load_OGL_texture(TEXTUREDIR"TCom_Sand_Muddy2_2x2_512_normal.JPG", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
 	iceAlbedo = SOIL_load_OGL_texture(TEXTUREDIR"Ice_001_COLOR.jpg", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
@@ -168,9 +168,10 @@ void Renderer::UpdateScene(float dt)
 	ResetViewProjToCamera();
 	sceneTime += dt;
 	spotlight->SetPosition(Matrix4::Translation(Vector3(0,-100,0))*camera->GetPosition());
-	pointToSun = Matrix4::Rotation(dt * 25, Vector3(1,0,0)) * pointToSun;
+	pointToSun = Matrix4::Rotation(dt * 15, Vector3(1,0,0)) * pointToSun;
 	sunLight->SetDirection(pointToSun);
 	sun->SetTransform(Matrix4::Translation(camera->GetPosition() + pointToSun * 50000) * Matrix4::Rotation(90, Vector3(1, 0, 0)));
+	//deal with the sun lighting rocks sticking through the ground being 'lit' from below
 	horizonCheck = std::min(Vector3::Dot(pointToSun, Vector3(0, 1, 0)) * 10, 1.0f);
 	if (horizonCheck < 0) horizonCheck = 0;
 	Matrix4 yaw = Matrix4::Rotation(camera->GetYaw() + (sinf(sceneTime) * 20), Vector3(0, 1, 0));
@@ -211,15 +212,15 @@ void Renderer::DrawHeightMap()
 	SetShaderSpotlight(*spotlight);
 	SetShaderDirectionLight(*sunLight);
 
-	//deal with the sun lighting rocks sticking through the ground being 'lit' from below
-	glUniform1f(glGetUniformLocation(lightShader->GetProgram(), "dirHorizonCheck"), horizonCheck);
-	glUniform1i(glGetUniformLocation(lightShader->GetProgram(), "diffuseTex"), 0);
-	glUniform3fv(glGetUniformLocation(lightShader->GetProgram(), "cameraPos"), 1, (float*)&camera->GetPosition());	
+	
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, heightmapTexSand);
-	glUniform1i(glGetUniformLocation(lightShader->GetProgram(), "bumpTex"), 1);
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, heightmapBump);
+	glUniform1f(glGetUniformLocation(lightShader->GetProgram(), "dirHorizonCheck"), horizonCheck);
+	glUniform1i(glGetUniformLocation(lightShader->GetProgram(), "diffuseTex"), 0);
+	glUniform1i(glGetUniformLocation(lightShader->GetProgram(), "bumpTex"), 1);
+	glUniform3fv(glGetUniformLocation(lightShader->GetProgram(), "cameraPos"), 1, (float*)&camera->GetPosition());	
 	
 	for (char i = 0; i < lights.size(); i++)
 	{
@@ -369,7 +370,7 @@ void Renderer::DrawIce()
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_CUBE_MAP, cubeMap);
 	
-	glActiveTexture(GL_TEXTURE3);
+	glActiveTexture(GL_TEXTURE2);
 	glBindTexture(GL_TEXTURE_2D, iceBump);
 
 

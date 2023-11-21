@@ -15,6 +15,7 @@ public:
 
 protected:
 	Vector4 colour;
+	Vector4 intensity;
 	std::string name;
 };
 
