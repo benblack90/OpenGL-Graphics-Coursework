@@ -32,7 +32,8 @@ protected:
 	void DrawSkyBox();
 	void DrawHeightMap();
 	void DrawNode(SceneNode* n);
-	void DrawPostProcess();
+	void DrawMultiPassPostProcess();
+	void DrawSinglePassPostProcess();
 	void PresentScene();
 	void BuildNodeLists(SceneNode* from);
 	void DrawShadowScene();
@@ -72,9 +73,11 @@ protected:
 	ShadowMapTex shMapTex[2];
 	float sceneTime;
 	float horizonCheck;
+	float signalLoss;
 	Frustum frameFrustum;
 	Matrix4 worldTransform;
 	Vector3 pointToSun;
+	Vector3 pointToSatellite;
 
 	vector<SceneNode*> nodeList;
 	vector<Light*> lights;

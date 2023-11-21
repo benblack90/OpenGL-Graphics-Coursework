@@ -20,8 +20,9 @@ Renderer::Renderer(Window& parent)
 	Vector3 heightmapSize = heightMap->GetHeightmapSize();
 	camera = new Camera(-8, 120.0f, 0, heightmapSize * Vector3(0.8f, 0.5f, 0.34f));
 	pointToSun = Vector3(0, 1, 0);
-	spotlight = new Spotlight(camera->GetPosition(), Vector4(1,1,1, 1), 5000, 40);
-	sunLight = new DirectionLight(pointToSun, Vector4(1, 1, 1, 1));
+	pointToSatellite = Vector3(0, 1, 0);
+	spotlight = new Spotlight(camera->GetPosition(), Vector4(0.8,0.875,1, 1), 5000, 40);
+	sunLight = new DirectionLight(pointToSun, Vector4(1, 0.75, 0.75, 1));
 	lights.push_back(spotlight);
 	lights.push_back(sunLight);
 	GenerateShadowFBOs();
@@ -85,8 +86,6 @@ Renderer::~Renderer()
 	delete quad;
 	delete iceQuad;
 	delete root;
-	for (auto i : lights)
-		delete i;
 	glDeleteTextures(1, &heightmapTexSand);
 	glDeleteTextures(1, &heightmapBump);
 	glDeleteTextures(1, &cubeMap);
@@ -168,7 +167,8 @@ void Renderer::UpdateScene(float dt)
 	ResetViewProjToCamera();
 	sceneTime += dt;
 	spotlight->SetPosition(Matrix4::Translation(Vector3(0,-100,0))*camera->GetPosition());
-	pointToSun = Matrix4::Rotation(dt * 15, Vector3(1,0,0)) * pointToSun;
+	pointToSun = Matrix4::Rotation(dt * 5, Vector3(1,0,0)) * pointToSun;
+	pointToSatellite = Matrix4::Rotation(dt * 2, Vector3(1, 0, 0)) * pointToSatellite;
 	sunLight->SetDirection(pointToSun);
 	sun->SetTransform(Matrix4::Translation(camera->GetPosition() + pointToSun * 50000) * Matrix4::Rotation(90, Vector3(1, 0, 0)));
 	//deal with the sun lighting rocks sticking through the ground being 'lit' from below
@@ -191,16 +191,16 @@ void Renderer::RenderScene()
 	BuildNodeLists(root);
 	std::sort(nodeList.begin(), nodeList.end(), SceneNode::CompareByCameraDistance);
 	DrawShadowScene();
-	//glBindFramebuffer(GL_FRAMEBUFFER, bufferFBO);
-	//glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+	glBindFramebuffer(GL_FRAMEBUFFER, bufferFBO);
+	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	DrawSkyBox();
 	DrawHeightMap();
 	DrawIce();	
 	for (const auto& i : nodeList) DrawNode(i);
 	
-	//glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	//DrawPostProcess();
-	//PresentScene();
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	DrawSinglePassPostProcess();
+	PresentScene();
 	
 	//don't forget to clear them for the next frame!
 	nodeList.clear();
@@ -391,7 +391,7 @@ void Renderer::DrawIce()
 void Renderer::LoadPostProcess()
 {
 	pProcOutShader = new Shader("TexturedVertex.glsl", "TexturedFragment.glsl");
-	pProcShader = new Shader("TexturedVertex.glsl", "processfrag.glsl");
+	pProcShader = new Shader("TexturedVertex.glsl", "filmgrainFrag.glsl");
 
 	glGenTextures(1, &bufferDepthTex);
 	glBindTexture(GL_TEXTURE_2D, bufferDepthTex);
@@ -426,7 +426,7 @@ void Renderer::LoadPostProcess()
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-void Renderer::DrawPostProcess()
+void Renderer::DrawMultiPassPostProcess()
 {
 	glBindFramebuffer(GL_FRAMEBUFFER, processFBO);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, bufferColourTex[1], 0);
@@ -456,6 +456,29 @@ void Renderer::DrawPostProcess()
 		glBindTexture(GL_TEXTURE_2D, bufferColourTex[1]);
 		quad->Draw();
 	}
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glEnable(GL_DEPTH_TEST);
+}
+
+void Renderer::DrawSinglePassPostProcess()
+{
+	glBindFramebuffer(GL_FRAMEBUFFER, processFBO);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, bufferColourTex[0], 0);
+	BindShader(pProcShader);
+	modelMatrix.ToIdentity();
+	viewMatrix.ToIdentity();
+	projMatrix.ToIdentity();
+	glUniform1f(glGetUniformLocation(pProcShader->GetProgram(), "sceneTime"), sceneTime);
+	float signalLoss = std::min(std::max(1 - abs(Vector3::Dot(pointToSatellite,Vector3(0,1,0))), 0.0f), 0.65f);
+	glUniform1f(glGetUniformLocation(pProcShader->GetProgram(), "signalLoss"), signalLoss);
+	UpdateShaderMatrices();
+
+	glDisable(GL_DEPTH_TEST);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, bufferColourTex[0]);	
+	glUniform1i(glGetUniformLocation(pProcShader->GetProgram(), "sceneTex"), 0);
+	quad->Draw();
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glEnable(GL_DEPTH_TEST);
