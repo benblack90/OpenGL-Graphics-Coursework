@@ -3,7 +3,6 @@
 uniform sampler2D diffuseTex;
 uniform sampler2D bumpTex;
 uniform sampler2D shadowTex1;
-uniform sampler2D shadowTex2;
 uniform vec4 spotlightColour;
 uniform vec3 spotlightPos;
 uniform vec3 spotlightDir;
@@ -74,11 +73,10 @@ void main(void) {
 
 	vec3 dirDiffuse = CalculateDiffuse(diffuseTex, attenuation, dirlightDir,normal, dirlightColour) * dirHorizonCheck;
 	vec3 dirSpecular = CalculateSpecular(dirlightDir, viewDir, normal, attenuation, dirlightColour) * dirHorizonCheck;
-	float dirShadow = CalculateShadow(IN.shadowProjDir, shadowTex2) * dirHorizonCheck;
 	
 	vec3 spotDiffuse;
 	vec3 spotSpecular;
-	float spotShadow = 0.0;
+	float spotShadow = dirHorizonCheck;
 	vec4 spotlightFinalColour = vec4(0,0,0,0);
 	vec3 spotIncident = normalize(spotlightPos - IN.worldPos);	
 	float spotDotProd = dot(-spotlightDir,spotIncident);
@@ -93,10 +91,10 @@ void main(void) {
 	}
 	
 	
-	vec3 ambient = 0.3 * diffuseTex.rgb * dirlightColour.rgb * spotlightColour.rgb;
+	vec3 ambient = 0.1 * diffuseTex.rgb * dirlightColour.rgb * spotlightColour.rgb;
 	vec3 diffuse = (spotDiffuse + dirDiffuse)* dirlightColour.rgb * spotlightColour.rgb;
 	vec3 specular = (spotSpecular + dirSpecular)* dirlightColour.rgb * spotlightColour.rgb;
-	float shadow = clamp(spotShadow + dirShadow,0.0,1.0);
+	float shadow = spotShadow;
 	vec3 lighting = (ambient + shadow * (diffuse + specular)) * diffuseTex.rgb;
 	fragColour = vec4(lighting,1);
 	

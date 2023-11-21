@@ -24,7 +24,7 @@ protected:
 	HeightMap* heightMap;
 	Mesh* quad;
 
-	Light* light;
+	PointLight* light;
 	Camera* camera;
 
 	GLuint cubeMap;

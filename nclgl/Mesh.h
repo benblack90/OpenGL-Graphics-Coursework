@@ -87,11 +87,11 @@ public:
 	void GenerateNormals();
 	bool GetVertexIndicesForTri(unsigned int i, unsigned int& a, unsigned int& b, unsigned int& c) const;
 	float GenerateBoundingValues();
-
+	void GenerateTangents();
 
 protected:
 	void	BufferData();
-	void GenerateTangents();
+	
 	Vector4 GenerateTangent(int a, int b, int c);
 
 	GLuint	arrayObject;

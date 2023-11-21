@@ -1,7 +1,7 @@
 #include "HeightMap.h"
 #include <iostream>
 
-HeightMap::HeightMap(const std::string& name)
+HeightMap::HeightMap(const std::string& name, float xScale, float yScale, float zScale)
 {
 	int iWidth, iHeight, iChans;															//iChans meaning 'channels'
 	unsigned char* data = SOIL_load_image(name.c_str(), &iWidth, &iHeight, &iChans, 1);		//restrict output to one channel i.e.grayscale
@@ -17,10 +17,11 @@ HeightMap::HeightMap(const std::string& name)
 	vertices = new Vector3[numVertices];
 	textureCoords = new Vector2[numVertices];
 	indices = new GLuint[numIndices];
-	xScale = zScale = 16.0f;
-	yScale = 6.0f;
+	this->xScale = xScale;
+	this->yScale = yScale;
+	this->zScale = zScale;
 	Vector3 vertexScale = Vector3(xScale, yScale, zScale);
-	Vector2 textureScale = Vector2(1 / 16.0f, 1 / 16.0f);
+	Vector2 textureScale = Vector2(1 / zScale, 1 / zScale);
 
 	for (int z = 0; z < iHeight; ++z)
 	{

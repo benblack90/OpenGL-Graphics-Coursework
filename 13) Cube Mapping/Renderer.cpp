@@ -37,7 +37,7 @@ Renderer::Renderer(Window& parent)
 	Vector3 heightmapSize = heightMap->GetHeightmapSize();
 
 	camera = new Camera(-45.0f, 0.0f, 0.0f, heightmapSize * Vector3(0.5f, 5.0f, 0.5f));
-	light = new Light(heightmapSize * Vector3(0.5f, 1.5f, 0.5f), Vector4(1, 1, 1, 1), heightmapSize.x);
+	light = new PointLight(heightmapSize * Vector3(0.5f, 1.5f, 0.5f), Vector4(1, 1, 1, 1), heightmapSize.x);
 
 	projMatrix = Matrix4::Perspective(1.0f, 15000.0f, (float)width / (float)height, 45.0f);
 
@@ -89,7 +89,7 @@ void Renderer::DrawSkybox()
 void Renderer::DrawHeightmap()
 {
 	BindShader(lightShader);
-	SetShaderLight(*light);
+	SetShaderPointLight(*light);
 
 	glUniform3fv(glGetUniformLocation(lightShader->GetProgram(), "cameraPos"), 1, (float*)&camera->GetPosition());
 	glUniform1i(glGetUniformLocation(lightShader->GetProgram(), "diffuseTex"), 0);
@@ -124,7 +124,7 @@ void Renderer::DrawWater()
 
 	Vector3 hSize = heightMap->GetHeightmapSize();
 	modelMatrix = Matrix4::Translation(hSize * 0.5f) * Matrix4::Scale(hSize * 0.5f) * Matrix4::Rotation(90, Vector3(1, 0, 0));
-	textureMatrix = Matrix4::Translation(Vector3(waterCycle, 0.0f, waterCycle)) * Matrix4::Scale(Vector3(10, 10, 10)) * Matrix4::Rotation(waterRotate, Vector3(0, 0, 1));
+	//textureMatrix = Matrix4::Translation(Vector3(waterCycle, 0.0f, waterCycle)) * Matrix4::Scale(Vector3(10, 10, 10)) * Matrix4::Rotation(waterRotate, Vector3(0, 0, 1));
 
 	UpdateShaderMatrices();
 	quad->Draw();
