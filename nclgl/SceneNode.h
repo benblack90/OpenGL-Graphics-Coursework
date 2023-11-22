@@ -20,10 +20,13 @@ public:
 	void SetColour(Vector4 c) { colour = c; }
 
 	Vector3 GetModelScale() const { return modelScale; }
-	void SetModelScale(Vector3 s) { modelScale = s; }
+	void SetModelScale(Vector3 s) { modelScale = s; 
+	if (mesh)
+		boundingRadius = mesh->GenerateBoundingValues(s.x, s.y, s.z);
+	}
 
 	Mesh* GetMesh() const { return mesh; }
-	void SetMesh(Mesh* m) { mesh = m; }
+	void SetMesh(Mesh* m);
 
 	float GetBoundingRadius() const { return boundingRadius; }
 	void SetBoundingRadius(float f) { boundingRadius = f; }

@@ -3,7 +3,7 @@
 SceneNode::SceneNode(Mesh* mesh, Vector4 colour)
 {
 	this->mesh = mesh;
-	if (mesh) boundingRadius = mesh->GenerateBoundingValues();
+	if (mesh) boundingRadius = mesh->GenerateBoundingValues(GetModelScale().x, GetModelScale().y, GetModelScale().z);
 	this->colour = colour;
 	parent = nullptr;
 	modelScale = Vector3(1, 1, 1);
@@ -31,7 +31,7 @@ void SceneNode::AddChild(SceneNode* s)
 		return;
 	}
 	if (s->mesh) 
-		s->boundingRadius = s->mesh->GenerateBoundingValues();
+		s->boundingRadius = s->mesh->GenerateBoundingValues(s->GetModelScale().x, s->GetModelScale().y, s->GetModelScale().z);
 	children.push_back(s);
 	s->parent = this;
 }
@@ -49,6 +49,7 @@ void SceneNode::RemoveChild(SceneNode* s)
 void SceneNode::Draw(const OGLRenderer &r)
 {
 	if (mesh) mesh->Draw();
+	
 }
 
 void SceneNode::Update(float dt)
@@ -65,4 +66,10 @@ void SceneNode::Update(float dt)
 	{
 		(*i)->Update(dt);
 	}
+}
+
+void SceneNode::SetMesh(Mesh* m)
+{
+	 mesh = m; 
+	 boundingRadius = m->GenerateBoundingValues(GetModelScale().x, GetModelScale().y, GetModelScale().z); 
 }

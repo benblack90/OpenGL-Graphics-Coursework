@@ -86,7 +86,7 @@ public:
 	static Mesh* GenerateQuad();
 	void GenerateNormals();
 	bool GetVertexIndicesForTri(unsigned int i, unsigned int& a, unsigned int& b, unsigned int& c) const;
-	float GenerateBoundingValues();
+	float GenerateBoundingValues(float xScale, float yScale, float zScale);
 	void GenerateTangents();
 
 protected:

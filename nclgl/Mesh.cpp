@@ -588,13 +588,13 @@ Vector4 Mesh::GenerateTangent(int a, int b, int c)
 	return Vector4(tangent.x, tangent.y, tangent.z, handedness);
 }
 
-float Mesh::GenerateBoundingValues()
+float Mesh::GenerateBoundingValues(float xScale, float yScale, float zScale)
 {
 	float x = 0;
 	for (unsigned int i = 0; i < numVertices; i++)
 	{
-		float temp1 = std::max(abs(vertices[i].x), abs(vertices[i].y));
-		float temp2 = std::max(temp1, abs(vertices[i].z));
+		float temp1 = std::max(abs(vertices[i].x * xScale), abs(vertices[i].y * yScale));
+		float temp2 = std::max(temp1, abs(vertices[i].z * zScale));
 		if (temp2 > x) x = temp2;
 	}
 	return x;

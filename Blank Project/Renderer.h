@@ -3,6 +3,7 @@
 #include "../nclgl/SceneNode.h"
 #include "../nclgl/Frustum.h"
 #include "../nclgl/Light.h"
+#include "SolarSystem.h"
 
 
 class HeightMap;
@@ -29,6 +30,7 @@ protected:
 	void LoadTerrain();
 	void LoadCubeMap();
 	void LoadPostProcess();
+	void LoadSun();
 	void DrawSkyBox();
 	void DrawHeightMap();
 	void DrawNode(SceneNode* n);
@@ -42,6 +44,7 @@ protected:
 	void ResetViewProjToCamera();
 	void DrawIce();
 
+	bool planetSide;
 	HeightMap* heightMap;
 	Mesh* quad;
 	Mesh* iceQuad;
@@ -52,7 +55,8 @@ protected:
 	Shader* rockShader;
 	Shader* pProcShader;
 	Shader* pProcOutShader;
-	SceneNode* root;
+	SceneNode* planetRoot;
+	SolarSystem* orbitRoot;
 	SceneNode* sun;
 	Camera* camera;
 	DirectionLight* sunLight;

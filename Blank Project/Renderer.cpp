@@ -11,6 +11,7 @@ constexpr int POST_PASSES = 10;
 Renderer::Renderer(Window& parent)
 	:OGLRenderer(parent)
 {
+	planetSide = true;
 	quad = Mesh::GenerateQuad();
 	iceQuad = Mesh::GenerateQuad();
 	iceQuad->GenerateNormals();
@@ -30,7 +31,14 @@ Renderer::Renderer(Window& parent)
 
 	
 	LoadCubeMap();
-	root = new SceneNode();
+	
+	planetRoot = new SceneNode();
+	LoadSun();
+	GLuint planetTex = SOIL_load_OGL_texture(TEXTUREDIR"2k_ceres_fictional.JPG", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+	SetTextureRepeating(planetTex,true);
+	GLuint gasTex = SOIL_load_OGL_texture(TEXTUREDIR"2k_uranus.JPG", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+	SetTextureRepeating(gasTex, true);
+	orbitRoot = new SolarSystem(sun, lightShader, planetTex, gasTex);
 	
 	PlaceMesh(600 * 16, 660 * 16, rockAlbedo, rockBump, rockShader, "rock_01.msh");	
 	PlaceMesh(601 * 16, 659 * 16, rockAlbedo, rockBump, rockShader, "rock_01.msh");
@@ -45,24 +53,7 @@ Renderer::Renderer(Window& parent)
 	PlaceMesh(410 * 16, 651 * 16, rockAlbedo, rockBump, rockShader, "rock_01.msh");
 	PlaceMesh(309 * 16, 509 * 16, rockAlbedo, rockBump, rockShader, "rock_01.msh");
 	
-
-	Shader* sunShader = new Shader("sunVert.glsl", "sunFrag.glsl");
-	if (!sunShader->LoadSuccess()) return;
-
-	sun = new SceneNode();
-	GLuint sunTex = SOIL_load_OGL_texture(TEXTUREDIR"2K_sun.JPG", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
-	SetTextureRepeating(sunTex, true);
-	sun->SetAlbedoTexture(sunTex);
-	sun->SetColour(Vector4(1.0f, 1.0f, 1.0f, 1.0f));
-	sun->SetModelScale(Vector3(500.0f, 500.0f, 500.0f));
-	sun->SetShader(sunShader);	
-	sun->SetMesh(Mesh::LoadFromMeshFile("Sphere.msh"));
-	sun->SetTransform(Matrix4::Translation(camera->GetPosition() + pointToSun * 50000) * Matrix4::Rotation(90, Vector3(1, 0, 0)));
-	root->AddChild(sun);
 	
-	
-	sun->SetTransform(Matrix4::Translation(camera->GetPosition() + pointToSun * 50000) * Matrix4::Rotation(90, Vector3(1,0,0)));
-
 	
 	projMatrix = Matrix4::Perspective(1.0f, 150000.0f, (float)width / (float)height, 45.0f);
 
@@ -85,7 +76,7 @@ Renderer::~Renderer()
 	delete spotlight;
 	delete quad;
 	delete iceQuad;
-	delete root;
+	delete planetRoot;
 	glDeleteTextures(1, &heightmapTexSand);
 	glDeleteTextures(1, &heightmapBump);
 	glDeleteTextures(1, &cubeMap);
@@ -161,49 +152,116 @@ void Renderer::GenerateShadowFBOs()
 	}	
 }
 
+void Renderer::LoadSun()
+{
+	sun = new SceneNode();
+	GLuint sunTex = SOIL_load_OGL_texture(TEXTUREDIR"2K_sun.JPG", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+	Shader* sunShader = new Shader("sunVert.glsl", "sunFrag.glsl");
+	if (!sunShader->LoadSuccess()) return;
+	SetTextureRepeating(sunTex, true);
+	sun->SetAlbedoTexture(sunTex);
+	sun->SetColour({1,1,1,1});
+	sun->SetModelScale({500,500,500});
+	sun->SetShader(sunShader);
+	sun->SetMesh(Mesh::LoadFromMeshFile("Sphere.msh"));
+	sun->SetTransform(Matrix4::Translation(camera->GetPosition() + pointToSun * 50000) * Matrix4::Rotation(90, Vector3(1, 0, 0)));
+	planetRoot->AddChild(sun);
+}
+
+
 void Renderer::UpdateScene(float dt)
 {
+	if (Window::GetKeyboard()->KeyTriggered(KEYBOARD_1))
+	{
+		planetSide = true;
+		orbitRoot->Inactive();
+		camera->SetPosition(heightMap->GetHeightmapSize() * Vector3(0.8f, 0.5f, 0.34f));
+		camera->SetPitch(-8);
+		camera->SetYaw(120);
+		spotlight->SetRadius(5000);
+		//OTHER INTERMEDIARY STEP CODE GOES HERE
+	}
+	if (Window::GetKeyboard()->KeyTriggered(KEYBOARD_2))
+	{
+		planetSide = false;
+		orbitRoot->Active();
+		sun->SetTransform(Matrix4::Translation(Vector3(0,0,0)));
+		orbitRoot->Update(dt);
+		camera->SetPosition(orbitRoot->GetPlanetPosition().GetPositionVector() + Vector3(-350,0,0));
+		camera->SetYaw(270);
+		sunLight->SetDirection(orbitRoot->GetPointToPlanet());
+		spotlight->SetPosition(Vector3(0, 550, 0));
+		spotlight->SetRadius(50000);
+	}
 	camera->UpdateCamera(dt);
 	ResetViewProjToCamera();
+	Matrix4 yaw;
+	Matrix4 pitch;
+	Vector3 forward;
 	sceneTime += dt;
-	spotlight->SetPosition(Matrix4::Translation(Vector3(0,-100,0))*camera->GetPosition());
-	pointToSun = Matrix4::Rotation(dt * 5, Vector3(1,0,0)) * pointToSun;
-	pointToSatellite = Matrix4::Rotation(dt * 2, Vector3(1, 0, 0)) * pointToSatellite;
-	sunLight->SetDirection(pointToSun);
-	sun->SetTransform(Matrix4::Translation(camera->GetPosition() + pointToSun * 50000) * Matrix4::Rotation(90, Vector3(1, 0, 0)));
-	//deal with the sun lighting rocks sticking through the ground being 'lit' from below
-	horizonCheck = std::min(Vector3::Dot(pointToSun, Vector3(0, 1, 0)) * 10, 1.0f);
-	if (horizonCheck < 0) horizonCheck = 0;
-	Matrix4 yaw = Matrix4::Rotation(camera->GetYaw() + (sinf(sceneTime) * 20), Vector3(0, 1, 0));
-	Matrix4 pitch = Matrix4::Rotation(camera->GetPitch() - 10, Vector3(1, 0, 0));
-	Vector3 forward = (yaw * pitch * Vector3(0, 0, -1));
-	spotlight->SetDirection(forward);
-	frameFrustum.FromMatrix(projMatrix * viewMatrix);
-
-	root->Update(dt);
+	switch (planetSide)
+	{
+	case true:
+		spotlight->SetPosition(Matrix4::Translation(Vector3(0, -100, 0)) * camera->GetPosition());
+		pointToSun = Matrix4::Rotation(dt * 5, Vector3(1, 0, 0)) * pointToSun;
+		pointToSatellite = Matrix4::Rotation(dt * 2, Vector3(1, 0, 0)) * pointToSatellite;
+		sunLight->SetDirection(pointToSun);
+		sun->SetTransform(Matrix4::Translation(camera->GetPosition() + pointToSun * 30000) * Matrix4::Rotation(90, Vector3(1, 0, 0)));
+		//deal with the sun lighting rocks sticking through the ground being 'lit' from below
+		horizonCheck = std::min(Vector3::Dot(pointToSun, Vector3(0, 1, 0)) * 10, 1.0f);
+		if (horizonCheck < 0) horizonCheck = 0;
+		yaw = Matrix4::Rotation(camera->GetYaw() + (sinf(sceneTime) * 20), Vector3(0, 1, 0));
+		pitch = Matrix4::Rotation(camera->GetPitch() - 10, Vector3(1, 0, 0));
+		forward = (yaw * pitch * Vector3(0, 0, -1));
+		spotlight->SetDirection(forward);
+		frameFrustum.FromMatrix(projMatrix * viewMatrix);
+		planetRoot->Update(dt);
+		break;
+	case false:
+		frameFrustum.FromMatrix(projMatrix * viewMatrix);
+		orbitRoot->Update(dt);
+		sunLight->SetDirection(orbitRoot->GetPointToPlanet());
+		spotlight->SetDirection(orbitRoot->GetPointToPlanet());
+		horizonCheck = 1;
+		break;
+	}
+	
 }
 
 void Renderer::RenderScene()
 {
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
-	
-	//rebuild and sort, before drawing
-	BuildNodeLists(root);
-	std::sort(nodeList.begin(), nodeList.end(), SceneNode::CompareByCameraDistance);
-	DrawShadowScene();
-	glBindFramebuffer(GL_FRAMEBUFFER, bufferFBO);
-	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-	DrawSkyBox();
-	DrawHeightMap();
-	DrawIce();	
-	for (const auto& i : nodeList) DrawNode(i);
-	
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	DrawSinglePassPostProcess();
-	PresentScene();
-	
+	switch (planetSide)
+	{
+	case true:
+		//rebuild and sort, before drawing
+		BuildNodeLists(planetRoot);
+		std::sort(nodeList.begin(), nodeList.end(), SceneNode::CompareByCameraDistance);
+		DrawShadowScene();
+		glBindFramebuffer(GL_FRAMEBUFFER, bufferFBO);
+		glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+		DrawSkyBox();
+		DrawHeightMap();
+		DrawIce();
+		for (const auto& i : nodeList) DrawNode(i);
+
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		DrawSinglePassPostProcess();
+		PresentScene();
+
+		
+		break;
+	case false:
+		BuildNodeLists(orbitRoot);
+		std::sort(nodeList.begin(), nodeList.end(), SceneNode::CompareByCameraDistance);
+		DrawSkyBox();
+		for (const auto& i : nodeList) DrawNode(i);
+		break;
+	}
+
 	//don't forget to clear them for the next frame!
 	nodeList.clear();
+	
 }
 
 void Renderer::DrawHeightMap()
@@ -264,7 +322,7 @@ void Renderer::DrawNode(SceneNode* n)
 		glBindTexture(GL_TEXTURE_2D, n->GetBumpTexture());
 		UpdateShaderMatrices();
 		
-		glUniform1f(glGetUniformLocation(lightShader->GetProgram(), "dirHorizonCheck"), horizonCheck);
+		glUniform1f(glGetUniformLocation(n->GetShader()->GetProgram(), "dirHorizonCheck"), horizonCheck);
 		//shadow matrices are stored in shMapTex instead of on OGL renderer, so need to add them here
 		//glUniformMatrix4fv(glGetUniformLocation(n->GetShader()->GetProgram(), "shadowMatrix1"), 1, false, shMapTex[0].shadowMatrix.values);
 		//readjust model matrix, so it matches the values we actually want, though.
@@ -292,8 +350,7 @@ void Renderer::BuildNodeLists(SceneNode* from)
 
 void Renderer::DrawShadowScene()
 {
-	glEnable(GL_CULL_FACE);
-	glCullFace(GL_FRONT);
+	
 	for (int i = 0; i < lights.size(); i++)
 	{
 		glBindFramebuffer(GL_FRAMEBUFFER, shMapTex[i].shadowFBO);
@@ -305,12 +362,15 @@ void Renderer::DrawShadowScene()
 		BindShader(shadowShader);
 
 		if (lights[i]->GetName() == "spot")
-		{
+		{		
 			viewMatrix = Matrix4::BuildViewMatrixFromNormal(spotlight->GetPosition(), spotlight->GetDirection(), Vector3(0, 1, 0));
 			projMatrix = Matrix4::Perspective(100, 5000, 1, 60);
+
+					
 		}
 		else
 		{
+
 			viewMatrix = Matrix4::BuildViewMatrixFromNormal(Vector3(0.5, 0, 0.5) * heightMap->GetHeightmapSize(), -pointToSun, Vector3(0, 0, -1));
 			projMatrix = Matrix4::Orthographic(-heightMap->GetHeightmapSize().x, heightMap->GetHeightmapSize().x,
 				heightMap->GetHeightmapSize().x / 2, -heightMap->GetHeightmapSize().x / 2,
@@ -332,7 +392,7 @@ void Renderer::DrawShadowScene()
 		glViewport(0, 0, width, height);
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	}	
-	glDisable(GL_CULL_FACE);
+
 	ResetViewProjToCamera();
 }
 
@@ -349,11 +409,11 @@ void Renderer::PlaceMesh(float x, float z, GLuint albedo, GLuint bump, Shader* s
 	s->SetModelScale(Vector3(1.0f, 1.0f, 1.0f));
 	s->SetShader(shader);
 	s->SetMesh(Mesh::LoadFromMeshFile(meshName));
-	root->AddChild(s);
+	planetRoot->AddChild(s);
 }
 
 void Renderer::ResetViewProjToCamera()
-{	
+{		
 	viewMatrix = camera->BuildViewMatrix();
 	projMatrix = Matrix4::Perspective(1.0f, 150000.0f, (float)width / (float)height, 45.0f);
 }
