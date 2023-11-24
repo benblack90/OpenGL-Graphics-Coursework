@@ -1,6 +1,7 @@
 #pragma once
 #include "Matrix4.h"
 #include "Vector3.h"
+#include "../nclgl/HeightMap.h"
 
 class Camera
 {
@@ -22,7 +23,7 @@ public:
 
 	~Camera(void) {	};
 
-	void UpdateCamera(float dt = 1.0f);
+	void UpdateCamera(HeightMap* heightMap, bool planetSide, bool autoCamera, float dt = 1.0f);
 	Matrix4 BuildViewMatrix();
 
 	Vector3 GetPosition() const { return position; }
@@ -34,7 +35,18 @@ public:
 	float GetPitch() const { return pitch; }
 	void SetPitch(float p) { pitch = p; }
 
+	float GetCameraTimer() const{ return cameraTimer; }
+	void SetCameraTimer(float t) { cameraTimer = t; }
+
 protected:
+	void ReadCamControl(float dt);
+	void FollowTrack(float dt, bool planetSide, HeightMap* heightMap);
+
+	Matrix4 rotation = Matrix4::Rotation(yaw, Vector3(0, 1, 0));
+	Vector3 forward = rotation * Vector3(0, 0, -1);
+	Vector3 right = rotation * Vector3(1, 0, 0);
+
+	float cameraTimer = 0;;
 	float yaw;
 	float pitch;
 	float roll;

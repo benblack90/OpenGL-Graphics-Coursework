@@ -38,7 +38,7 @@ vec3 CalculateSpecular(vec3 incident, vec3 viewDir, vec3 normal, float attenuati
 {
 	vec3 halfDir = normalize(incident + viewDir);
 	float specFactor = clamp(dot(halfDir, normal), 0.0, 1.0);
-	specFactor = pow(specFactor, 50.0);	
+	specFactor = pow(specFactor, 75.0);	
 	vec3 specularLight = lightColour.rgb * specFactor * attenuation * 0.33;
 	return specularLight;
 }
@@ -63,7 +63,7 @@ void main(void) {
 
 	vec3 spotIncident = normalize(spotlightPos - IN.worldPos);	
 	float spotDotProd = dot(-spotlightDir,spotIncident);
-	vec3 ambient = 0.3 * diffuseTex.rgb * dirlightColour.rgb;
+	vec3 ambient = 0.15 * diffuseTex.rgb * dirlightColour.rgb;
 	vec3 diffuse = dirDiffuse * dirlightColour.rgb;
 	vec3 specular = dirSpecular;
 
@@ -77,7 +77,7 @@ void main(void) {
 		diffuse += spotDiffuse;
 		specular += spotSpecular;
 	}
-
+	diffuse *= 1.5;
 
 	vec3 lighting = (ambient + (diffuse + specular)) * diffuseTex.rgb;
 	fragColour = vec4(lighting,1);

@@ -5,32 +5,29 @@
 #include "../nclgl/HeightMap.h"
 #include <algorithm>
 
-#define SHADOWSIZE 2048
-constexpr int POST_PASSES = 10;
+#define SHADOWSIZE 4096
+//constexpr int POST_PASSES = 10;
 
 Renderer::Renderer(Window& parent)
 	:OGLRenderer(parent)
 {
 	planetSide = true;
+	autoCamera = true;
 	quad = Mesh::GenerateQuad();
-	iceQuad = Mesh::GenerateQuad();
-	iceQuad->GenerateNormals();
-	iceQuad->GenerateTangents();
 
 	LoadTerrain();	
 	Vector3 heightmapSize = heightMap->GetHeightmapSize();
-	camera = new Camera(-8, 120.0f, 0, heightmapSize * Vector3(0.8f, 0.5f, 0.34f));
+	camera = new Camera(-30, 120.0f, 0, heightmapSize * Vector3(0.8f, 0.75f, 0.34f));
 	pointToSun = Vector3(0, 1, 0);
 	pointToSatellite = Vector3(0, 1, 0);
-	spotlight = new Spotlight(camera->GetPosition(), Vector4(0.8,0.875,1, 1), 5000, 40);
+	spotlight = new Spotlight(camera->GetPosition(), Vector4(1.25,1.02,1.5,1), 5000, 40);
 	sunLight = new DirectionLight(pointToSun, Vector4(1, 0.75, 0.75, 1));
 	lights.push_back(spotlight);
 	lights.push_back(sunLight);
 	GenerateShadowFBOs();
-	LoadPostProcess();
-
-	
+	LoadPostProcess();	
 	LoadCubeMap();
+	LoadHudTexes();
 	
 	planetRoot = new SceneNode();
 	LoadSun();
@@ -62,7 +59,8 @@ Renderer::Renderer(Window& parent)
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 	sceneTime = 0.0f;
-	
+	hudTimer = 0.0f;
+	warnText = false;
 	init = true;
 }
 
@@ -75,7 +73,6 @@ Renderer::~Renderer()
 	delete reflectShader;
 	delete spotlight;
 	delete quad;
-	delete iceQuad;
 	delete planetRoot;
 	glDeleteTextures(1, &heightmapTexSand);
 	glDeleteTextures(1, &heightmapBump);
@@ -88,8 +85,38 @@ Renderer::~Renderer()
 	{
 		glDeleteFramebuffers(1, &shMapTex[i].shadowFBO);
 		glDeleteTextures(1, &shMapTex[i].shadowTex);
+	}	
+}
+
+void Renderer::CheckSceneControlKeys()
+{
+	if (Window::GetKeyboard()->KeyTriggered(KEYBOARD_C)) 
+		autoCamera = !autoCamera;
+	if (!planetSide && (Window::GetKeyboard()->KeyTriggered(KEYBOARD_1) || (camera->GetCameraTimer() > 15) && autoCamera))
+	{
+		planetSide = true;
+		camera->SetCameraTimer(0.0f);
+		orbitRoot->Inactive();
+		camera->SetPosition(heightMap->GetHeightmapSize() * Vector3(0.8f, 0.75f, 0.34f));
+		camera->SetPitch(-30);
+		camera->SetYaw(120);
+		spotlight->SetRadius(5000);
+		//OTHER INTERMEDIARY STEP CODE GOES HERE
 	}
-	
+	if (planetSide && (Window::GetKeyboard()->KeyTriggered(KEYBOARD_2) || (camera->GetCameraTimer() > 60) && autoCamera))
+	{
+		planetSide = false;
+		camera->SetCameraTimer(0.0f);
+		orbitRoot->Active();
+		sun->SetTransform(Matrix4::Translation(Vector3(0, 0, 0)));
+		orbitRoot->Update(deltaTime);
+		camera->SetPosition(orbitRoot->GetPlanetPosition().GetPositionVector() + Vector3(-550, 0, 0));
+		camera->SetYaw(270);
+		camera->SetPitch(0);
+		sunLight->SetDirection(orbitRoot->GetPointToPlanet());
+		spotlight->SetPosition(Vector3(0, 550, 0));
+		spotlight->SetRadius(50000);
+	}
 }
 
 void Renderer::LoadCubeMap()
@@ -131,6 +158,17 @@ void Renderer::LoadTerrain()
 	glEnable(GL_DEPTH_TEST);
 }
 
+void Renderer::LoadHudTexes()
+{
+	fullSigTex = SOIL_load_OGL_texture(TEXTUREDIR"fullSignal.png", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+	hiMidSigTex = SOIL_load_OGL_texture(TEXTUREDIR"midHiSig.png", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+	loMidSigTex = SOIL_load_OGL_texture(TEXTUREDIR"midLoSig.png", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+	loSigWarnTexes[true] = SOIL_load_OGL_texture(TEXTUREDIR"signalLoWarn.png", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+	loSigWarnTexes[false] = SOIL_load_OGL_texture(TEXTUREDIR"signalLoNoWarn.png", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);	
+
+	if (!fullSigTex || !hiMidSigTex || !loMidSigTex || !loSigWarnTexes[true] || !loSigWarnTexes[false]) return;
+}
+
 void Renderer::GenerateShadowFBOs()
 {
 	for (int i = 0; i < lights.size(); i++)
@@ -160,7 +198,7 @@ void Renderer::LoadSun()
 	if (!sunShader->LoadSuccess()) return;
 	SetTextureRepeating(sunTex, true);
 	sun->SetAlbedoTexture(sunTex);
-	sun->SetColour({1,1,1,1});
+	sun->SetColour({100,100,100,1});
 	sun->SetModelScale({500,500,500});
 	sun->SetShader(sunShader);
 	sun->SetMesh(Mesh::LoadFromMeshFile("Sphere.msh"));
@@ -171,40 +209,21 @@ void Renderer::LoadSun()
 
 void Renderer::UpdateScene(float dt)
 {
-	if (Window::GetKeyboard()->KeyTriggered(KEYBOARD_1))
-	{
-		planetSide = true;
-		orbitRoot->Inactive();
-		camera->SetPosition(heightMap->GetHeightmapSize() * Vector3(0.8f, 0.5f, 0.34f));
-		camera->SetPitch(-8);
-		camera->SetYaw(120);
-		spotlight->SetRadius(5000);
-		//OTHER INTERMEDIARY STEP CODE GOES HERE
-	}
-	if (Window::GetKeyboard()->KeyTriggered(KEYBOARD_2))
-	{
-		planetSide = false;
-		orbitRoot->Active();
-		sun->SetTransform(Matrix4::Translation(Vector3(0,0,0)));
-		orbitRoot->Update(dt);
-		camera->SetPosition(orbitRoot->GetPlanetPosition().GetPositionVector() + Vector3(-350,0,0));
-		camera->SetYaw(270);
-		sunLight->SetDirection(orbitRoot->GetPointToPlanet());
-		spotlight->SetPosition(Vector3(0, 550, 0));
-		spotlight->SetRadius(50000);
-	}
-	camera->UpdateCamera(dt);
+	deltaTime = dt;
+	sceneTime += dt;
+	CheckSceneControlKeys();	
+	camera->UpdateCamera(heightMap, planetSide, autoCamera, dt);
 	ResetViewProjToCamera();
 	Matrix4 yaw;
 	Matrix4 pitch;
 	Vector3 forward;
-	sceneTime += dt;
+	
 	switch (planetSide)
 	{
 	case true:
 		spotlight->SetPosition(Matrix4::Translation(Vector3(0, -100, 0)) * camera->GetPosition());
 		pointToSun = Matrix4::Rotation(dt * 5, Vector3(1, 0, 0)) * pointToSun;
-		pointToSatellite = Matrix4::Rotation(dt * 2, Vector3(1, 0, 0)) * pointToSatellite;
+		pointToSatellite = Matrix4::Rotation(dt * 6, Vector3(1, 0, 0)) * pointToSatellite;
 		sunLight->SetDirection(pointToSun);
 		sun->SetTransform(Matrix4::Translation(camera->GetPosition() + pointToSun * 30000) * Matrix4::Rotation(90, Vector3(1, 0, 0)));
 		//deal with the sun lighting rocks sticking through the ground being 'lit' from below
@@ -246,16 +265,24 @@ void Renderer::RenderScene()
 		for (const auto& i : nodeList) DrawNode(i);
 
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		DrawSinglePassPostProcess();
+		//DrawMultiPassBlur();
+		HDRToneMap();		
+		DrawFilmGrainPass();
 		PresentScene();
+		DrawHud(deltaTime);
 
 		
 		break;
 	case false:
+		glBindFramebuffer(GL_FRAMEBUFFER, bufferFBO);
+		glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 		BuildNodeLists(orbitRoot);
 		std::sort(nodeList.begin(), nodeList.end(), SceneNode::CompareByCameraDistance);
 		DrawSkyBox();
 		for (const auto& i : nodeList) DrawNode(i);
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		HDRToneMap();
+		PresentScene();
 		break;
 	}
 
@@ -270,7 +297,6 @@ void Renderer::DrawHeightMap()
 	SetShaderSpotlight(*spotlight);
 	SetShaderDirectionLight(*sunLight);
 
-	
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, heightmapTexSand);
 	glActiveTexture(GL_TEXTURE1);
@@ -364,9 +390,7 @@ void Renderer::DrawShadowScene()
 		if (lights[i]->GetName() == "spot")
 		{		
 			viewMatrix = Matrix4::BuildViewMatrixFromNormal(spotlight->GetPosition(), spotlight->GetDirection(), Vector3(0, 1, 0));
-			projMatrix = Matrix4::Perspective(100, 5000, 1, 60);
-
-					
+			projMatrix = Matrix4::Perspective(100, 5000, 1, 60);		
 		}
 		else
 		{
@@ -445,13 +469,18 @@ void Renderer::DrawIce()
 	modelMatrix = Matrix4::Translation(Vector3(hSize.x/2, hSize.y * 0.18, hSize.z/2)) * Matrix4::Scale(hSize * 0.5) * Matrix4::Rotation(90, Vector3(1, 0, 0));
 
 	UpdateShaderMatrices();
-	iceQuad->Draw();
+	quad->Draw();
 }
 
 void Renderer::LoadPostProcess()
 {
 	pProcOutShader = new Shader("TexturedVertex.glsl", "TexturedFragment.glsl");
-	pProcShader = new Shader("TexturedVertex.glsl", "filmgrainFrag.glsl");
+	pProcGrainShader = new Shader("TexturedVertex.glsl", "filmgrainFrag.glsl");
+	pProcHDRShader = new Shader("basicTextureVert.glsl", "HDRToneFrag.glsl");
+	pProcBloomExtract = new Shader("basicTextureVert.glsl", "bloomExtractFrag.glsl");
+	pProcBlurShader = new Shader("TexturedVertex.glsl", "processfrag.glsl");
+	if (!pProcOutShader->LoadSuccess() || !pProcGrainShader->LoadSuccess() || !pProcHDRShader->LoadSuccess() 
+		|| !pProcBloomExtract->LoadSuccess() || !pProcBlurShader->LoadSuccess() ) return;
 
 	glGenTextures(1, &bufferDepthTex);
 	glBindTexture(GL_TEXTURE_2D, bufferDepthTex);
@@ -460,17 +489,26 @@ void Renderer::LoadPostProcess()
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, width, height, 0, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, NULL);
-
+	/*
 	for (int i = 0; i < 2; i++)
 	{
-		glGenTextures(1, &bufferColourTex[i]);
-		glBindTexture(GL_TEXTURE_2D, bufferColourTex[i]);
+		glGenTextures(1, &blurColourTex[i]);
+		glBindTexture(GL_TEXTURE_2D, blurColourTex[i]);
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
+
 	}
+	*/
+	glGenTextures(1, &bufferTex);
+	glBindTexture(GL_TEXTURE_2D, bufferTex);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
 
 	glGenFramebuffers(1, &bufferFBO);
 	glGenFramebuffers(1, &processFBO);
@@ -478,66 +516,92 @@ void Renderer::LoadPostProcess()
 	glBindFramebuffer(GL_FRAMEBUFFER, bufferFBO);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, bufferDepthTex, 0);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_TEXTURE_2D, bufferDepthTex, 0);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, bufferColourTex[0], 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, bufferTex, 0);
 
-	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE || !bufferDepthTex || !bufferColourTex[0])
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE || !bufferDepthTex || !bufferTex)
 		return;
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-void Renderer::DrawMultiPassPostProcess()
+void Renderer::DrawMultiPassBlur()
 {
+	/*
+	//make the bloom map
+	
 	glBindFramebuffer(GL_FRAMEBUFFER, processFBO);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, bufferColourTex[1], 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, blurColourTex[0], 0);
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
-	BindShader(pProcShader);
-	modelMatrix.ToIdentity();
-	viewMatrix.ToIdentity();
-	projMatrix.ToIdentity();
-	UpdateShaderMatrices();
-
-	glDisable(GL_DEPTH_TEST);
-
+	BindShader(pProcBloomExtract);
 	glActiveTexture(GL_TEXTURE0);
-	glUniform1i(glGetUniformLocation(pProcShader->GetProgram(), "sceneTex"), 0);
-
+	glBindTexture(GL_TEXTURE_2D, bufferTex);
+	quad->Draw();
+	
+	glDisable(GL_DEPTH_TEST);
+	glActiveTexture(GL_TEXTURE1);
+	BindShader(pProcBlurShader);
+	glBindTexture(GL_TEXTURE_2D, blurColourTex[0]);
+	//UpdateShaderMatrices();
+	glUniform1i(glGetUniformLocation(pProcBlurShader->GetProgram(), "sceneTex"), 1);
 	for (int i = 0; i < POST_PASSES; i++)
 	{
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, bufferColourTex[1], 0);
-		glUniform1i(glGetUniformLocation(pProcShader->GetProgram(), "isVertical"), 0);
-
-		glBindTexture(GL_TEXTURE_2D, bufferColourTex[0]);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, blurColourTex[1], 0);
+		glUniform1i(glGetUniformLocation(pProcBlurShader->GetProgram(), "isVertical"), 0);
+		
+		glBindTexture(GL_TEXTURE_2D, blurColourTex[0]);
 		quad->Draw();
 
 		//swap the colour buffers
-		glUniform1i(glGetUniformLocation(pProcShader->GetProgram(), "isVertical"), 1);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, bufferColourTex[0], 0);
-		glBindTexture(GL_TEXTURE_2D, bufferColourTex[1]);
+		glUniform1i(glGetUniformLocation(pProcBlurShader->GetProgram(), "isVertical"), 1);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, blurColourTex[0], 0);
+		glBindTexture(GL_TEXTURE_2D, blurColourTex[1]);
 		quad->Draw();
 	}
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glEnable(GL_DEPTH_TEST);
+	*/
 }
 
-void Renderer::DrawSinglePassPostProcess()
+void Renderer::HDRToneMap()
 {
+
+	//make the HDR tonemap
 	glBindFramebuffer(GL_FRAMEBUFFER, processFBO);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, bufferColourTex[0], 0);
-	BindShader(pProcShader);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, bufferTex, 0);
+	BindShader(pProcHDRShader);
 	modelMatrix.ToIdentity();
 	viewMatrix.ToIdentity();
 	projMatrix.ToIdentity();
-	glUniform1f(glGetUniformLocation(pProcShader->GetProgram(), "sceneTime"), sceneTime);
-	float signalLoss = std::min(std::max(1 - abs(Vector3::Dot(pointToSatellite,Vector3(0,1,0))), 0.0f), 0.65f);
-	glUniform1f(glGetUniformLocation(pProcShader->GetProgram(), "signalLoss"), signalLoss);
+	UpdateShaderMatrices();
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, bufferTex);
+	glUniform1i(glGetUniformLocation(pProcHDRShader->GetProgram(), "hiTex"), 0);
+	quad->Draw();
+
+	
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+void Renderer::DrawFilmGrainPass()
+{
+	glBindFramebuffer(GL_FRAMEBUFFER, processFBO);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, bufferTex, 0);
+	BindShader(pProcGrainShader);
+	modelMatrix.ToIdentity();
+	viewMatrix.ToIdentity();
+	projMatrix.ToIdentity();
+	glUniform1f(glGetUniformLocation(pProcGrainShader->GetProgram(), "sceneTime"), sceneTime);
+	//signal loss ranges from 0 to 0.65, when the satellite is on the opposite side of the planet
+	signalLoss = abs(std::min(0.35f + Vector3::Dot(pointToSatellite, Vector3(0, 1, 0)), 0.0f));
+	glUniform1f(glGetUniformLocation(pProcGrainShader->GetProgram(), "signalLoss"), signalLoss);
 	UpdateShaderMatrices();
 
 	glDisable(GL_DEPTH_TEST);
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, bufferColourTex[0]);	
-	glUniform1i(glGetUniformLocation(pProcShader->GetProgram(), "sceneTex"), 0);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, bufferTex);	
+	glUniform1i(glGetUniformLocation(pProcGrainShader->GetProgram(), "sceneTex"), 1);
 	quad->Draw();
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -554,7 +618,35 @@ void Renderer::PresentScene()
 	projMatrix.ToIdentity();
 	UpdateShaderMatrices();
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, bufferColourTex[0]);
+	glBindTexture(GL_TEXTURE_2D, bufferTex);
 	glUniform1i(glGetUniformLocation(pProcOutShader->GetProgram(), "diffuseTex"), 0);
+	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 	quad->Draw();
+}
+
+void Renderer::DrawHud(float dt)
+{
+	glDisable(GL_DEPTH_TEST);
+	
+	modelMatrix = Matrix4::Rotation(180, Vector3(0, 1, 0)) * Matrix4::Rotation(180, Vector3(0, 0, -1));
+	viewMatrix.ToIdentity();
+	projMatrix.ToIdentity();
+	glBindTexture(GL_TEXTURE_2D, fullSigTex);
+	if (signalLoss > 0.0f) glBindTexture(GL_TEXTURE_2D, hiMidSigTex);
+	if (signalLoss > 0.25f) glBindTexture(GL_TEXTURE_2D, loMidSigTex);
+	if (signalLoss > 0.45f)
+	{
+		hudTimer += dt;
+		//flash text on/text off version every second
+		glBindTexture(GL_TEXTURE_2D, loSigWarnTexes[warnText]);
+		if (hudTimer > 1)
+		{
+			hudTimer = 0.0f;
+			warnText = !warnText;
+		}
+
+	}
+	UpdateShaderMatrices();
+	quad->Draw();
+	glEnable(GL_DEPTH_TEST);
 }

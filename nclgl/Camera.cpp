@@ -2,7 +2,15 @@
 #include "Window.h"
 #include <algorithm>
 
-void Camera::UpdateCamera(float dt)
+void Camera::UpdateCamera(HeightMap* heightMap, bool planetSide, bool autoCamera, float dt)
+{
+
+	if (!autoCamera) ReadCamControl(dt);
+	if (autoCamera) FollowTrack(dt, planetSide, heightMap);
+
+}
+
+void Camera::ReadCamControl(float dt)
 {
 	pitch -= (Window::GetMouse()->GetRelativePosition().y) * pitchSpeed;
 	yaw -= (Window::GetMouse()->GetRelativePosition().x) * yawSpeed;
@@ -20,10 +28,9 @@ void Camera::UpdateCamera(float dt)
 		yaw -= 360.0f;
 	}
 
-	Matrix4 rotation = Matrix4::Rotation(yaw, Vector3(0, 1, 0));
-
-	Vector3 forward = rotation * Vector3(0, 0, -1);
-	Vector3 right = rotation * Vector3(1, 0, 0);
+	rotation = Matrix4::Rotation(yaw, Vector3(0, 1, 0));
+	forward = rotation * Vector3(0, 0, -1);
+	right = rotation * Vector3(1, 0, 0);
 
 	float speed = 300.0f * dt;
 
@@ -76,4 +83,38 @@ Matrix4 Camera::BuildViewMatrix()
 		Matrix4::Rotation(-yaw, Vector3(0, 1, 0)) *
 		Matrix4::Rotation(-roll, Vector3(0, 0, 1)) *
 		Matrix4::Translation(-position);
+}
+
+void Camera::FollowTrack(float dt, bool planetSide,HeightMap* heightMap)
+{
+	cameraTimer += dt;
+	if (planetSide)
+	{
+		
+		forward = rotation * Vector3(0, 0, -1);
+		right = rotation * Vector3(1, 0, 0);
+		rotation = Matrix4::Rotation(yaw, Vector3(0, 1, 0));
+		position += forward * 210.0f * dt;
+		right = right * sinf(cameraTimer);
+		position += right * 75 * dt;
+		yaw += 1 * dt;
+		if (pitch < -8) pitch += 1 * dt;
+		if (position.y - heightMap->GetHeightAtXZ(position.x, position.z) < 500) position.y += 5 * dt;
+		if (position.y - heightMap->GetHeightAtXZ(position.x, position.z) > 1500) position.y -= 5 * dt;
+		if (cameraTimer > 56)
+		{
+			pitch += 8 * dt;
+			position += forward * 300 * dt;
+		}
+		if (position.x < 5000 || position.z < 5000 || position.x > 14000 || position.z > 11000) yaw -= 12 * dt;		
+	}
+	if (!planetSide)
+	{
+		forward = rotation * Vector3(0, 0, -1);
+		right = rotation * Vector3(1, 0, 0);
+		rotation = Matrix4::Rotation(yaw, Vector3(0, 1, 0));
+		position += right * 75 * dt;
+		yaw += 8 * dt;
+
+	}
 }

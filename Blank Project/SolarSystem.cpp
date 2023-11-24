@@ -17,15 +17,9 @@ void SolarSystem::Update(float dt)
 {
 	
 	pointToPlanet = Matrix4::Rotation(dt * 0.01, Vector3(0, 1, 0)) * pointToPlanet;
-	pointToSatellite = Matrix4::Rotation(dt * 5, Vector3(0.9446, 0, 0)) * pointToSatellite;
+	pointToSatellite = Matrix4::Rotation(dt * 5, Vector3(0, 0.266423, 0)) * pointToSatellite;
 	pointToGasGiant = Matrix4::Rotation(dt * 0.11, Vector3(0, 1, 0)) * pointToGasGiant;
-	Matrix4 rotation = Matrix4::Rotation(dt * 10, Vector3(0, 1, 0))* mainPlanet->GetWorldTransform();
-	Matrix4 translation = Matrix4::Translation(pointToPlanet * 45000);
-	Matrix4 rotlation = rotation;
-	rotlation.values[12] = translation.values[12];
-	rotlation.values[13] = translation.values[13];
-	rotlation.values[14] = translation.values[14];
-	mainPlanet->SetTransform(rotlation);
+	mainPlanet->SetTransform(Matrix4::Translation(pointToPlanet * 45000));
 	satellite->SetTransform(Matrix4::Translation(pointToSatellite * 250));
 	gasGiant->SetTransform(Matrix4::Translation(pointToGasGiant * 35000));
 
@@ -66,4 +60,5 @@ void SolarSystem::Active()
 void SolarSystem::Inactive()
 {
 	sun->RemoveChild(mainPlanet);
+	sun->RemoveChild(gasGiant);
 }

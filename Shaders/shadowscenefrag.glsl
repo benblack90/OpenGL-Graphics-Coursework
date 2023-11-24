@@ -80,7 +80,7 @@ void main(void) {
 	vec3 spotSpecular;
 	vec3 spotIncident = normalize(spotlightPos - IN.worldPos);	
 	float spotDotProd = dot(-spotlightDir,spotIncident);
-	vec3 ambient = 0.3 * diffuseTex.rgb * dirlightColour.rgb;
+	vec3 ambient = 0.15 * diffuseTex.rgb * dirlightColour.rgb;
 	vec3 diffuse = dirDiffuse * dirlightColour.rgb;
 	vec3 specular = dirSpecular;
 	float shadow = dirShadow;

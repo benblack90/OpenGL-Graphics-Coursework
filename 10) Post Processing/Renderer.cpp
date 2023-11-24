@@ -7,13 +7,15 @@ Renderer::Renderer(Window& parent)
 	camera = new Camera(-25.0f, 225.0f, 0, Vector3(-150.0f, 250.0f, -150.0f));
 	quad = Mesh::GenerateQuad();
 
-	heightMap = new HeightMap(TEXTUREDIR"noise.png");
+	heightMap = new HeightMap(TEXTUREDIR"noise.png", 16,6,16);
 	heightTexture = SOIL_load_OGL_texture(TEXTUREDIR"Barren Reds.JPG", SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
 
 	sceneShader = new Shader("TexturedVertex.glsl", "TexturedFragment.glsl");
 	processShader = new Shader("TexturedVertex.glsl", "processfrag.glsl");
 
-	if (!processShader->LoadSuccess() || !sceneShader->LoadSuccess() || !heightTexture) return;
+	if (!processShader->LoadSuccess() || 
+		!sceneShader->LoadSuccess() || !heightTexture) 
+		return;
 	
 	SetTextureRepeating(heightTexture, true);
 
@@ -96,6 +98,7 @@ void Renderer::DrawScene()
 
 void Renderer::DrawPostProcess()
 {
+	
 	glBindFramebuffer(GL_FRAMEBUFFER, processFBO);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, bufferColourTex[1], 0);
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
@@ -127,6 +130,7 @@ void Renderer::DrawPostProcess()
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glEnable(GL_DEPTH_TEST);
+	
 }
 
 void Renderer::PresentScene()

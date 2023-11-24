@@ -14,6 +14,7 @@ out Vertex
 
 	vec2 texCoord;
 
+
 } OUT;
 
 void main(void)
