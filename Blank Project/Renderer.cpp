@@ -114,7 +114,7 @@ void Renderer::CheckSceneControlKeys()
 		spotlight->SetRadius(5000);
 		//OTHER INTERMEDIARY STEP CODE GOES HERE
 	}
-	if (planetSide && (Window::GetKeyboard()->KeyTriggered(KEYBOARD_2) || (camera->GetCameraTimer() > 60) && autoCamera))
+	if (planetSide && (Window::GetKeyboard()->KeyTriggered(KEYBOARD_2) || (camera->GetCameraTimer() > 63) && autoCamera))
 	{
 		planetSide = false;
 		camera->SetCameraTimer(0.0f);
@@ -670,7 +670,7 @@ void Renderer::DrawHud(float dt)
 	modelMatrix = Matrix4::Rotation(180, Vector3(0, 1, 0)) * Matrix4::Rotation(180, Vector3(0, 0, -1));
 	viewMatrix.ToIdentity();
 	projMatrix.ToIdentity();
-	glBindTexture(GL_TEXTURE_2D, fullSigTex);
+	if(signalLoss <= 0.0f) glBindTexture(GL_TEXTURE_2D, fullSigTex);
 	if (signalLoss > 0.0f) glBindTexture(GL_TEXTURE_2D, hiMidSigTex);
 	if (signalLoss > 0.25f) glBindTexture(GL_TEXTURE_2D, loMidSigTex);
 	if (signalLoss > 0.45f)

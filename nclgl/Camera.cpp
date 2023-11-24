@@ -106,7 +106,7 @@ void Camera::FollowTrack(float dt, bool planetSide,HeightMap* heightMap)
 		if (pitch < -8) pitch += 1 * dt;
 		if (position.y - heightMap->GetHeightAtXZ(position.x, position.z) < 500) position.y += 5 * dt;
 		if (position.y - heightMap->GetHeightAtXZ(position.x, position.z) > 1500) position.y -= 5 * dt;
-		if (cameraTimer > 56)
+		if (cameraTimer > 58)
 		{
 			pitch += 8 * dt;
 			position += forward * 300 * dt;
