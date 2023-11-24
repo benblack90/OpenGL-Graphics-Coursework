@@ -6,12 +6,15 @@ uniform float signalLoss;
 
 out vec4 fragColour;
 
+in Vertex {
+	vec2 texCoord;
+} IN;
+
 void main() {
 
-  vec2 texSize  = textureSize(sceneTex, 0).xy;
-  vec2 texCoord = gl_FragCoord.xy / texSize;
+ 
 
-  vec4 colour = texture(sceneTex, texCoord);
+  vec4 colour = texture(sceneTex, IN.texCoord);
 
 
  float noise = fract( 16000 * cos(( gl_FragCoord.x + gl_FragCoord.y * ((sin(sceneTime*40)))) * (3.141/180)));

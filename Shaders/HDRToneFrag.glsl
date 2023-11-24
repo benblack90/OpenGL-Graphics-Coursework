@@ -8,10 +8,9 @@ void main()
 
     vec2 texSize  = textureSize(hdrTex, 0).xy;  
     vec2 texCoord = gl_FragCoord.xy / texSize;
-    vec3 hdrColor = texture(hdrTex, texCoord).rgb;
+    vec3 hdrTex = texture(hdrTex, texCoord).rgb;
 
-      // reinhard tone mapping
-    vec3 mapped = hdrColor / (hdrColor + vec3(1.0));
+    vec3 rhard = hdrTex / (hdrTex + vec3(1.0));
   
-    fragColour = vec4(mapped, 1.0);
+    fragColour = vec4(rhard, 1.0);
 }

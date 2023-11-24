@@ -10,6 +10,11 @@ void Camera::UpdateCamera(HeightMap* heightMap, bool planetSide, bool autoCamera
 
 }
 
+void Camera::UpdateCamera(float dt)
+{
+	ReadCamControl(dt);
+}
+
 void Camera::ReadCamControl(float dt)
 {
 	pitch -= (Window::GetMouse()->GetRelativePosition().y) * pitchSpeed;

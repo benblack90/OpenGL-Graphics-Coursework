@@ -6,13 +6,16 @@
 #include <algorithm>
 
 #define SHADOWSIZE 4096
-//constexpr int POST_PASSES = 10;
+constexpr int POST_PASSES = 8;
 
 Renderer::Renderer(Window& parent)
 	:OGLRenderer(parent)
 {
 	planetSide = true;
 	autoCamera = true;
+	toneMapping = true;
+	showHud = true;
+	showNoise = true;
 	quad = Mesh::GenerateQuad();
 
 	LoadTerrain();	
@@ -92,6 +95,12 @@ void Renderer::CheckSceneControlKeys()
 {
 	if (Window::GetKeyboard()->KeyTriggered(KEYBOARD_C)) 
 		autoCamera = !autoCamera;
+	if (Window::GetKeyboard()->KeyTriggered(KEYBOARD_H))
+		showHud = !showHud;
+	if (Window::GetKeyboard()->KeyTriggered(KEYBOARD_T))
+		toneMapping = !toneMapping;
+	if (Window::GetKeyboard()->KeyTriggered(KEYBOARD_N))
+		showNoise = !showNoise;
 	if (!planetSide && (Window::GetKeyboard()->KeyTriggered(KEYBOARD_1) || (camera->GetCameraTimer() > 15) && autoCamera))
 	{
 		planetSide = true;
@@ -265,11 +274,15 @@ void Renderer::RenderScene()
 		for (const auto& i : nodeList) DrawNode(i);
 
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		//DrawMultiPassBlur();
-		HDRToneMap();		
-		DrawFilmGrainPass();
+		DrawMultiPassBlur();
+		if(toneMapping)
+			HDRToneMap();		
+		DrawBloom();
+		if(showNoise)
+			DrawFilmGrainPass();
 		PresentScene();
-		DrawHud(deltaTime);
+		if(showHud)
+			DrawHud(deltaTime);
 
 		
 		break;
@@ -281,7 +294,8 @@ void Renderer::RenderScene()
 		DrawSkyBox();
 		for (const auto& i : nodeList) DrawNode(i);
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		HDRToneMap();
+		if (toneMapping)
+			HDRToneMap();
 		PresentScene();
 		break;
 	}
@@ -489,7 +503,7 @@ void Renderer::LoadPostProcess()
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, width, height, 0, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, NULL);
-	/*
+
 	for (int i = 0; i < 2; i++)
 	{
 		glGenTextures(1, &blurColourTex[i]);
@@ -501,7 +515,7 @@ void Renderer::LoadPostProcess()
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
 
 	}
-	*/
+
 	glGenTextures(1, &bufferTex);
 	glBindTexture(GL_TEXTURE_2D, bufferTex);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -526,23 +540,23 @@ void Renderer::LoadPostProcess()
 
 void Renderer::DrawMultiPassBlur()
 {
-	/*
-	//make the bloom map
 	
+	//make the bloom map
+	glDisable(GL_DEPTH_TEST);
 	glBindFramebuffer(GL_FRAMEBUFFER, processFBO);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, blurColourTex[0], 0);
-	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 	BindShader(pProcBloomExtract);
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, bufferTex);
 	quad->Draw();
-	
-	glDisable(GL_DEPTH_TEST);
-	glActiveTexture(GL_TEXTURE1);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, blurColourTex[1], 0);
+	quad->Draw();
 	BindShader(pProcBlurShader);
-	glBindTexture(GL_TEXTURE_2D, blurColourTex[0]);
-	//UpdateShaderMatrices();
-	glUniform1i(glGetUniformLocation(pProcBlurShader->GetProgram(), "sceneTex"), 1);
+	modelMatrix.ToIdentity();
+	viewMatrix.ToIdentity();
+	projMatrix.ToIdentity();
+	UpdateShaderMatrices();
+	glUniform1i(glGetUniformLocation(pProcBlurShader->GetProgram(), "sceneTex"), 0);
 	for (int i = 0; i < POST_PASSES; i++)
 	{
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, blurColourTex[1], 0);
@@ -560,7 +574,7 @@ void Renderer::DrawMultiPassBlur()
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glEnable(GL_DEPTH_TEST);
-	*/
+	
 }
 
 void Renderer::HDRToneMap()
@@ -574,13 +588,30 @@ void Renderer::HDRToneMap()
 	viewMatrix.ToIdentity();
 	projMatrix.ToIdentity();
 	UpdateShaderMatrices();
-	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, bufferTex);
 	glUniform1i(glGetUniformLocation(pProcHDRShader->GetProgram(), "hiTex"), 0);
 	quad->Draw();
 
 	
 
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+void Renderer::DrawBloom()
+{
+	glBindFramebuffer(GL_FRAMEBUFFER, processFBO);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, bufferTex, 0);
+	glBindTexture(GL_TEXTURE_2D, blurColourTex[0]);
+	BindShader(pProcOutShader);
+	glActiveTexture(GL_TEXTURE0);
+	modelMatrix.ToIdentity();
+	viewMatrix.ToIdentity();
+	projMatrix.ToIdentity();
+	UpdateShaderMatrices();
+	glUniform1i(glGetUniformLocation(pProcOutShader->GetProgram(), "diffuseTex"), 0);
+	glBlendFunc(GL_ONE, GL_ONE);
+	quad->Draw();
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
@@ -599,9 +630,8 @@ void Renderer::DrawFilmGrainPass()
 	UpdateShaderMatrices();
 
 	glDisable(GL_DEPTH_TEST);
-	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, bufferTex);	
-	glUniform1i(glGetUniformLocation(pProcGrainShader->GetProgram(), "sceneTex"), 1);
+	glUniform1i(glGetUniformLocation(pProcGrainShader->GetProgram(), "sceneTex"), 0);
 	quad->Draw();
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);

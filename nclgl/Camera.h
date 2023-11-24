@@ -13,6 +13,7 @@ public:
 		roll = 0.0f;
 	};
 
+
 	Camera(float pitch, float yaw, float roll, Vector3 position)
 	{
 		this->pitch = pitch;
@@ -24,6 +25,7 @@ public:
 	~Camera(void) {	};
 
 	void UpdateCamera(HeightMap* heightMap, bool planetSide, bool autoCamera, float dt = 1.0f);
+	void UpdateCamera(float dt);
 	Matrix4 BuildViewMatrix();
 
 	Vector3 GetPosition() const { return position; }

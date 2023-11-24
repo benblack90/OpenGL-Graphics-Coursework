@@ -38,6 +38,7 @@ protected:
 	void DrawNode(SceneNode* n);
 	void DrawMultiPassBlur();
 	void DrawFilmGrainPass();
+	void DrawBloom();
 	void HDRToneMap();
 	void PresentScene();
 	void BuildNodeLists(SceneNode* from);
@@ -50,6 +51,9 @@ protected:
 
 	bool planetSide;
 	bool autoCamera;
+	bool showHud;
+	bool showNoise;
+	bool toneMapping;
 	HeightMap* heightMap;
 	Mesh* quad;
 	Shader* lightShader;
@@ -62,6 +66,7 @@ protected:
 	Shader* pProcHDRShader;
 	Shader* pProcOutShader;
 	Shader* pProcBlurShader;
+	Shader* pProcBloomAdd;
 	SceneNode* planetRoot;
 	SolarSystem* orbitRoot;
 	SceneNode* sun;
@@ -82,7 +87,7 @@ protected:
 	bool warnText;
 	GLuint bufferFBO;
 	GLuint processFBO;
-	//GLuint blurColourTex[2];
+	GLuint blurColourTex[2];
 	GLuint bufferTex;
 	GLuint bufferDepthTex;
 	ShadowMapTex shMapTex[2];
