@@ -54,6 +54,7 @@ protected:
 	bool showHud;
 	bool showNoise;
 	bool toneMapping;
+	bool showBloom;
 	HeightMap* heightMap;
 	Mesh* quad;
 	Shader* lightShader;

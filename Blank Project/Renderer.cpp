@@ -101,6 +101,8 @@ void Renderer::CheckSceneControlKeys()
 		toneMapping = !toneMapping;
 	if (Window::GetKeyboard()->KeyTriggered(KEYBOARD_N))
 		showNoise = !showNoise;
+	if (Window::GetKeyboard()->KeyTriggered(KEYBOARD_B))
+		showBloom = !showBloom;
 	if (!planetSide && (Window::GetKeyboard()->KeyTriggered(KEYBOARD_1) || (camera->GetCameraTimer() > 15) && autoCamera))
 	{
 		planetSide = true;
@@ -274,10 +276,12 @@ void Renderer::RenderScene()
 		for (const auto& i : nodeList) DrawNode(i);
 
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
 		DrawMultiPassBlur();
 		if(toneMapping)
-			HDRToneMap();		
-		DrawBloom();
+			HDRToneMap();	
+		if(showBloom)
+			DrawBloom();
 		if(showNoise)
 			DrawFilmGrainPass();
 		PresentScene();
@@ -294,8 +298,12 @@ void Renderer::RenderScene()
 		DrawSkyBox();
 		for (const auto& i : nodeList) DrawNode(i);
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	
+		DrawMultiPassBlur();
 		if (toneMapping)
 			HDRToneMap();
+		if (showBloom)
+			DrawBloom();
 		PresentScene();
 		break;
 	}
@@ -588,6 +596,7 @@ void Renderer::HDRToneMap()
 	viewMatrix.ToIdentity();
 	projMatrix.ToIdentity();
 	UpdateShaderMatrices();
+	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, bufferTex);
 	glUniform1i(glGetUniformLocation(pProcHDRShader->GetProgram(), "hiTex"), 0);
 	quad->Draw();
