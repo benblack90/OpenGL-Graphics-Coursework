@@ -361,3 +361,33 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+/1) Your First Triangle/Tutorial1.vcxproj
+/1) Your First Triangle/Tutorial1.vcxproj.filters
+/10) Post Processing/Tutorial10.vcxproj
+/10) Post Processing/Tutorial10.vcxproj.filters
+/11) Per Fragment Lighting A/Tutorial11.vcxproj
+/11) Per Fragment Lighting A/Tutorial11.vcxproj.filters
+/12) Per Fragment Lighting B/Tutorial12.vcxproj
+/12) Per Fragment Lighting B/Tutorial12.vcxproj.filters
+/13) Cube Mapping/Tutorial13.vcxproj
+/13) Cube Mapping/Tutorial13.vcxproj.filters
+/14) Shadow Mapping/tutorial14.vcxproj
+/14) Shadow Mapping/tutorial14.vcxproj.filters
+/15) Deferred Shading/Tutorial15.vcxproj
+/15) Deferred Shading/Tutorial15.vcxproj.filters
+/2) Matrix Transformations/Tutorial2.vcxproj
+/2) Matrix Transformations/Tutorial2.vcxproj.filters
+/3) Texturing/Tutorial3.vcxproj
+/3) Texturing/Tutorial3.vcxproj.filters
+/4) Depth & Transparency/Tutorial4.vcxproj
+/4) Depth & Transparency/Tutorial4.vcxproj.filters
+/5) Stencils & Scissors/Tutorial5.vcxproj
+/5) Stencils & Scissors/Tutorial5.vcxproj.filters
+/6) Scene Graph/Tutorial6.vcxproj
+/6) Scene Graph/Tutorial6.vcxproj.filters
+/7) Scene Management/Tutorial7.vcxproj
+/7) Scene Management/Tutorial7.vcxproj.filters
+/8) Index Buffers/Tutorial8.vcxproj
+/8) Index Buffers/Tutorial8.vcxproj.filters
+/9) Skeletal Animation/Tutorial9.vcxproj
+/9) Skeletal Animation/Tutorial9.vcxproj.filters
