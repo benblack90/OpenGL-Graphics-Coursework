@@ -71,12 +71,23 @@ Renderer::~Renderer()
 {
 	delete camera;
 	delete heightMap;
+
 	delete lightShader;
 	delete skyboxShader;
-	delete reflectShader;
+	delete reflectShader;	
+	delete shadowShader;
+	delete rockShader;
+	delete pProcBloomExtract;
+	delete pProcGrainShader;
+	delete pProcHDRShader;
+	delete pProcOutShader;
+	delete pProcBlurShader;
+
 	delete spotlight;
+	delete sunLight;
 	delete quad;
 	delete planetRoot;
+
 	glDeleteTextures(1, &heightmapTexSand);
 	glDeleteTextures(1, &heightmapBump);
 	glDeleteTextures(1, &cubeMap);
@@ -112,7 +123,6 @@ void Renderer::CheckSceneControlKeys()
 		camera->SetPitch(-30);
 		camera->SetYaw(120);
 		spotlight->SetRadius(5000);
-		//OTHER INTERMEDIARY STEP CODE GOES HERE
 	}
 	if (planetSide && (Window::GetKeyboard()->KeyTriggered(KEYBOARD_2) || (camera->GetCameraTimer() > 63) && autoCamera))
 	{
@@ -547,8 +557,7 @@ void Renderer::LoadPostProcess()
 }
 
 void Renderer::DrawMultiPassBlur()
-{
-	
+{	
 	//make the bloom map
 	glDisable(GL_DEPTH_TEST);
 	glBindFramebuffer(GL_FRAMEBUFFER, processFBO);
@@ -587,8 +596,6 @@ void Renderer::DrawMultiPassBlur()
 
 void Renderer::HDRToneMap()
 {
-
-	//make the HDR tonemap
 	glBindFramebuffer(GL_FRAMEBUFFER, processFBO);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, bufferTex, 0);
 	BindShader(pProcHDRShader);
@@ -600,9 +607,6 @@ void Renderer::HDRToneMap()
 	glBindTexture(GL_TEXTURE_2D, bufferTex);
 	glUniform1i(glGetUniformLocation(pProcHDRShader->GetProgram(), "hiTex"), 0);
 	quad->Draw();
-
-	
-
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 

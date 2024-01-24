@@ -67,7 +67,6 @@ protected:
 	Shader* pProcHDRShader;
 	Shader* pProcOutShader;
 	Shader* pProcBlurShader;
-	Shader* pProcBloomAdd;
 	SceneNode* planetRoot;
 	SolarSystem* orbitRoot;
 	SceneNode* sun;

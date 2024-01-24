@@ -3,7 +3,6 @@
 #include "Vector3.h"
 #include <string>
 
-/*Abstract class for different light types: abstract, because in order to be fully general, the light has neither a position, nor a direction*/
 class Light
 {
 public:
@@ -19,7 +18,6 @@ protected:
 	std::string name;
 };
 
-/*Direction light. All rays come from a single direction. Constructor ensures this value is a normal, for easy calculations*/
 class DirectionLight : public Light
 {
 public:
@@ -64,8 +62,7 @@ protected:
 
 
 
-/*Subclass of pointlight which specifies an angle of possible incidences. This is also expressed as a precalculated minimum dot product, for
-easy comparison with other normals*/
+
 class Spotlight : public PointLight
 {
 public:
@@ -73,10 +70,7 @@ public:
 		:PointLight(position, colour, radius)
 	{
 		this->angle = angle;
-		//using the cosine rule, A.B = |A| |B| cos(theta), we can 'convert' an angle to a dot product. Theta is the angle between a vector on the 
-		//edge of the light, and a vector from the centre of the light. The angle parameter must thus be halved, to equal theta
 		dotProdMin = cosf((angle / 2) * (PI/180));
-		//2 degrees of extra softer light
 		dimProdMin = cosf(((angle - 2) / 2) * (PI / 180));
 		direction = Vector3(0, 0, -1);
 		name = "spot";
