@@ -234,38 +234,43 @@ void Renderer::UpdateScene(float dt)
 	sceneTime += dt;
 	CheckSceneControlKeys();	
 	camera->UpdateCamera(heightMap, planetSide, autoCamera, dt);
-	ResetViewProjToCamera();
-	Matrix4 yaw;
-	Matrix4 pitch;
-	Vector3 forward;
+	ResetViewProjToCamera();	
 	
-	switch (planetSide)
+	if (planetSide)
 	{
-	case true:
-		spotlight->SetPosition(Matrix4::Translation(Vector3(0, -100, 0)) * camera->GetPosition());
-		pointToSun = Matrix4::Rotation(dt * 5, Vector3(1, 0, 0)) * pointToSun;
-		pointToSatellite = Matrix4::Rotation(dt * 6, Vector3(1, 0, 0)) * pointToSatellite;
-		sunLight->SetDirection(pointToSun);
-		sun->SetTransform(Matrix4::Translation(camera->GetPosition() + pointToSun * 30000) * Matrix4::Rotation(90, Vector3(1, 0, 0)));
-		//deal with the sun lighting rocks sticking through the ground being 'lit' from below
-		horizonCheck = std::min(Vector3::Dot(pointToSun, Vector3(0, 1, 0)) * 10, 1.0f);
-		if (horizonCheck < 0) horizonCheck = 0;
-		yaw = Matrix4::Rotation(camera->GetYaw() + (sinf(sceneTime) * 20), Vector3(0, 1, 0));
-		pitch = Matrix4::Rotation(camera->GetPitch() - 10, Vector3(1, 0, 0));
-		forward = (yaw * pitch * Vector3(0, 0, -1));
-		spotlight->SetDirection(forward);
-		frameFrustum.FromMatrix(projMatrix * viewMatrix);
+		MoveOrbiters();
+		OscillateSpot();
 		planetRoot->Update(dt);
-		break;
-	case false:
-		frameFrustum.FromMatrix(projMatrix * viewMatrix);
+	}
+	else
+	{
 		orbitRoot->Update(dt);
 		sunLight->SetDirection(orbitRoot->GetPointToPlanet());
 		spotlight->SetDirection(orbitRoot->GetPointToPlanet());
 		horizonCheck = 1;
-		break;
 	}
+	frameFrustum.FromMatrix(projMatrix * viewMatrix);
 	
+}
+void Renderer::MoveOrbiters()
+{
+	
+	pointToSun = Matrix4::Rotation(deltaTime * 5, Vector3(1, 0, 0)) * pointToSun;
+	pointToSatellite = Matrix4::Rotation(deltaTime * 6, Vector3(1, 0, 0)) * pointToSatellite;
+	sunLight->SetDirection(pointToSun);
+	sun->SetTransform(Matrix4::Translation(camera->GetPosition() + pointToSun * 30000) * Matrix4::Rotation(90, Vector3(1, 0, 0)));
+	//deal with the sun lighting rocks sticking through the ground being 'lit' from below
+	horizonCheck = std::min(Vector3::Dot(pointToSun, Vector3(0, 1, 0)) * 10, 1.0f);
+	if (horizonCheck < 0) horizonCheck = 0;
+}
+
+void Renderer::OscillateSpot()
+{
+	spotlight->SetPosition(Matrix4::Translation(Vector3(0, -100, 0)) * camera->GetPosition());
+	Matrix4 yaw = Matrix4::Rotation(camera->GetYaw() + (sinf(sceneTime) * 20), Vector3(0, 1, 0));
+	Matrix4 pitch = Matrix4::Rotation(camera->GetPitch() - 10, Vector3(1, 0, 0));
+	Vector3 forward = (yaw * pitch * Vector3(0, 0, -1));
+	spotlight->SetDirection(forward);
 }
 
 void Renderer::RenderScene()
@@ -296,9 +301,7 @@ void Renderer::RenderScene()
 			DrawFilmGrainPass();
 		PresentScene();
 		if(showHud)
-			DrawHud(deltaTime);
-
-		
+			DrawHud(deltaTime);		
 		break;
 	case false:
 		glBindFramebuffer(GL_FRAMEBUFFER, bufferFBO);

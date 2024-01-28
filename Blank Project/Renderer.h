@@ -28,6 +28,8 @@ public:
 	void UpdateScene(float dt) override;
 protected:
 	void CheckSceneControlKeys();
+	void MoveOrbiters();
+	void OscillateSpot();
 	void LoadTerrain();
 	void LoadCubeMap();
 	void LoadPostProcess();
