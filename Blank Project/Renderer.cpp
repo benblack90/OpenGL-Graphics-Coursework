@@ -292,7 +292,7 @@ void Renderer::RenderScene()
 
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-		DrawMultiPassBlur();
+		CreateBloomFromQuads();
 		if(toneMapping)
 			HDRToneMap();	
 		if(showBloom)
@@ -312,7 +312,7 @@ void Renderer::RenderScene()
 		for (const auto& i : nodeList) DrawNode(i);
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	
-		DrawMultiPassBlur();
+		CreateBloomFromQuads();
 		if (toneMapping)
 			HDRToneMap();
 		if (showBloom)
@@ -492,13 +492,10 @@ void Renderer::DrawIce()
 	glActiveTexture(GL_TEXTURE2);
 	glBindTexture(GL_TEXTURE_2D, iceBump);
 
-
 	glUniform1i(glGetUniformLocation(reflectShader->GetProgram(), "diffuseTex"), 0);
 	glUniform3fv(glGetUniformLocation(reflectShader->GetProgram(), "cameraPos"), 1, (float*)&camera->GetPosition());
 	glUniform1i(glGetUniformLocation(reflectShader->GetProgram(), "cubeTex"), 1);
 	glUniform1i(glGetUniformLocation(reflectShader->GetProgram(), "bumpTex"), 2);
-
-	
 
 	Vector3 hSize = heightMap->GetHeightmapSize();
 	modelMatrix = Matrix4::Translation(Vector3(hSize.x/2, hSize.y * 0.18, hSize.z/2)) * Matrix4::Scale(hSize * 0.5) * Matrix4::Rotation(90, Vector3(1, 0, 0));
@@ -559,11 +556,21 @@ void Renderer::LoadPostProcess()
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-void Renderer::DrawMultiPassBlur()
-{	
-	//make the bloom map
+
+
+void Renderer::CreateBloomFromQuads()
+{		
 	glDisable(GL_DEPTH_TEST);
 	glBindFramebuffer(GL_FRAMEBUFFER, processFBO);
+	MakeBloomMap();
+	RunBloomBlurPasses();
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glEnable(GL_DEPTH_TEST);	
+}
+
+void Renderer::MakeBloomMap()
+{
+	
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, blurColourTex[0], 0);
 	BindShader(pProcBloomExtract);
 	glActiveTexture(GL_TEXTURE0);
@@ -571,6 +578,10 @@ void Renderer::DrawMultiPassBlur()
 	quad->Draw();
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, blurColourTex[1], 0);
 	quad->Draw();
+}
+
+void Renderer::RunBloomBlurPasses()
+{
 	BindShader(pProcBlurShader);
 	modelMatrix.ToIdentity();
 	viewMatrix.ToIdentity();
@@ -581,7 +592,6 @@ void Renderer::DrawMultiPassBlur()
 	{
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, blurColourTex[1], 0);
 		glUniform1i(glGetUniformLocation(pProcBlurShader->GetProgram(), "isVertical"), 0);
-		
 		glBindTexture(GL_TEXTURE_2D, blurColourTex[0]);
 		quad->Draw();
 
@@ -591,26 +601,6 @@ void Renderer::DrawMultiPassBlur()
 		glBindTexture(GL_TEXTURE_2D, blurColourTex[1]);
 		quad->Draw();
 	}
-
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	glEnable(GL_DEPTH_TEST);
-	
-}
-
-void Renderer::HDRToneMap()
-{
-	glBindFramebuffer(GL_FRAMEBUFFER, processFBO);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, bufferTex, 0);
-	BindShader(pProcHDRShader);
-	modelMatrix.ToIdentity();
-	viewMatrix.ToIdentity();
-	projMatrix.ToIdentity();
-	UpdateShaderMatrices();
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, bufferTex);
-	glUniform1i(glGetUniformLocation(pProcHDRShader->GetProgram(), "hiTex"), 0);
-	quad->Draw();
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 void Renderer::DrawBloom()
@@ -630,6 +620,24 @@ void Renderer::DrawBloom()
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
+
+void Renderer::HDRToneMap()
+{
+	glBindFramebuffer(GL_FRAMEBUFFER, processFBO);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, bufferTex, 0);
+	BindShader(pProcHDRShader);
+	modelMatrix.ToIdentity();
+	viewMatrix.ToIdentity();
+	projMatrix.ToIdentity();
+	UpdateShaderMatrices();
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, bufferTex);
+	glUniform1i(glGetUniformLocation(pProcHDRShader->GetProgram(), "hiTex"), 0);
+	quad->Draw();
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+
 
 void Renderer::DrawFilmGrainPass()
 {

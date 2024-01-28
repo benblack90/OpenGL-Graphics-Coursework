@@ -38,9 +38,11 @@ protected:
 	void DrawSkyBox();
 	void DrawHeightMap();
 	void DrawNode(SceneNode* n);
-	void DrawMultiPassBlur();
+	void CreateBloomFromQuads();
+	void RunBloomBlurPasses();
 	void DrawFilmGrainPass();
 	void DrawBloom();
+	void MakeBloomMap();
 	void HDRToneMap();
 	void PresentScene();
 	void BuildNodeLists(SceneNode* from);
